@@ -26,7 +26,7 @@ green_grass = $b2           ; b2 Green
 blue_water = $84            ; 84 Blue
 
 
-    setup_screen
+    setup_screen()
 
 ; Set up the character set
     mva #>charset CHBAS
