@@ -71,20 +71,20 @@ Source: hardware.asm
     59
     60 203E			    icl '../lib/dlist.asm'
 Source: dlist.asm
-     1 = 0040			lms = $40                   ; Load memory scan
-     2 = 0041			jvb = $41                   ; Jump while vertical blank
-     3 				; Antic Modes
-     4 = 0002			antic2 = 2                  ; Antic mode 2
-     5 = 0003			antic3 = 3                  ; Antic mode 3
-     6 = 0004			antic4 = 4                  ; Antic mode 4
-     7 = 0005			antic5 = 5                  ; Antic mode 5
-     8 = 0006			antic6 = 6                  ; Antic mode 6
-     9 = 0007			antic7 = 7                  ; Antic mode 7
-    10 				; Load Display List
-    11 203E			.proc setup_screen
-    12 203E A9 49 8D 30 02 A9 +     mwa #dlist SDLSTL
-    13 2048 60			    rts
-    14 				    .endp
+     1
+     2 				; Load Display List
+     3 203E			.proc setup_screen
+     4 = 0040			lms = $40                   ; Load memory scan
+     5 = 0041			jvb = $41                   ; Jump while vertical blank
+     6 				; Antic Modes
+     7 = 0002			antic2 = 2                  ; Antic mode 2
+     8 = 0003			antic3 = 3                  ; Antic mode 3
+     9 = 0004			antic4 = 4                  ; Antic mode 4
+    10 = 0005			antic5 = 5                  ; Antic mode 5
+    11 = 0006			antic6 = 6                  ; Antic mode 6
+    12 = 0007			antic7 = 7                  ; Antic mode 7
+    13 203E A9 49 8D 30 02 A9 +     mwa #dlist SDLSTL
+    14 2048 60			    rts
     15 				; Display list
     16 2049			dlist
     17 2049 70 70 70		    .byte blank8, blank8, blank8
@@ -92,6 +92,7 @@ Source: dlist.asm
     19 204F 05 05 05 05 05 05	    .byte antic5, antic5, antic5, antic5, antic5, antic5
     20 2055 05 05 05 05 05	    .byte antic5, antic5, antic5, antic5, antic5
     21 205A 41 49 20		    .byte jvb, <dlist, >dlist
+    22 				    .endp
     61
     62
     63
