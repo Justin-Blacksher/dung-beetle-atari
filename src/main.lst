@@ -1,0 +1,110 @@
+mads 2.1.7 build 21 (20 May 24)
+Source: main.asm
+     1 				; Evil Dung Beetle
+     2 				; Assemble in MADS: mads -l -t main.asm
+     3 				; ATASCII Table: https://www.atariwiki.org/wiki/attach/Atari%20ATASCII%20Table/ascii_atascii_table.pdf
+     4 				; ATASCII 0-31 Screen code 64-95
+     5 				; ATASCII 32-95 Screen code 0-63
+     6 				; ATASCII 96-127 Screen code 96-127
+     7
+     8 				; NTSC Color Palette: https://atariage.com/forums/uploads/monthly_10_2015/post-6369-0-47505700-1443889945.png
+     9 				; PAL Color Palette: https://atariage.com/forums/uploads/monthly_10_2015/post-6369-0-90255700-1443889950.png
+    10
+    11
+    12 				    org $2000
+    13
+    14 = 0230			SDLSTL = $0230              ; Display list starting address
+    15 = 02F4			CHBAS = $02f4               ; Character Base Register
+    16
+    17 				; colors
+    18 = 02C4			COLOR0 = $02c4              ; Color for %01
+    19 = 02C5			COLOR1 = $02c5              ; Color for %10
+    20 = 02C6			COLOR2 = $02c6              ; Color for %11
+    21 = 02C7			COLOR3 = $02c7              ; Color for %11 (inverse)
+    22 = 02C8			COLOR4 = $02c8              ; Color for %00 (Background)
+    23
+    24 = 3C00			charset = $3c00             ; Character set
+    25 = 4000			screen = $4000              ; Screen buffer
+    26 = 0070			blank8 = $70                ; 8 blank lines
+    27 = 0040			lms = $40                   ; Load memory scan
+    28 = 0041			jvb = $41                   ; Jump while vertical blank
+    29
+    30 = 0002			antic2 = 2                  ; Antic mode 2
+    31 = 0003			antic3 = 3                  ; Antic mode 3
+    32 = 0004			antic4 = 4                  ; Antic mode 4
+    33 = 0005			antic5 = 5                  ; Antic mode 5
+    34 = 0006			antic6 = 6                  ; Antic mode 6
+    35 = 0007			antic7 = 7                  ; Antic mode 7
+    36
+    37 				; Color Pallett
+    38 = 0000			bg_black = $00              ; 00 Black
+    39 = 0012			poop_brown = $12            ; 12 Brown
+    40 = 0014			poop_peanut = $14           ; 14 yellow-brown
+    41 = 00B2			green_grass = $b2           ; b2 Green
+    42 = 0084			blue_water = $84            ; 84 Blue
+    43
+    44
+    45 				; load display list
+    46 FFFF> 2000-2074> A9 45 +     mwa #dlist SDLSTL
+    47
+    48 				; Set up the character set
+    49 200A A9 3C 8D F4 02	    mva #>charset CHBAS
+    50 				    
+    51 200F A2 00		    ldx #0
+    52 2011			loop
+    53
+    54 2011 BD 65 20 9D 08 3C	    mva chars,x charset+8,x
+    55 2017 E8			    inx
+    56 2018 E0 10		    cpx #16
+    57 201A D0 F5		    bne loop
+    58
+    59 				; Change colors
+    60 201C A9 12 8D C4 02	    mva #poop_brown COLOR0
+    61 2021 A9 14 8D C5 02	    mva #poop_peanut COLOR1
+    62 2026 A9 B2 8D C6 02	    mva #green_grass COLOR2
+    63 202B A9 84 8D C7 02	    mva #blue_water COLOR3
+    64 2030 A9 00 8D C8 02	    mva #bg_black COLOR4
+    65 				    
+    66
+    67 2035 A0 00		    ldy #0
+    68
+    69 2037			loop2
+    70 2037 B9 59 20 99 00 40	    mva scene,y screen,y
+    71 203D C8			    iny
+    72 203E C0 0C		    cpy #12
+    73 2040 D0 F5		    bne loop2
+    74
+    75 2042 4C 42 20		    jmp *
+    76
+    77
+    78 				; Display list
+    79 2045			dlist
+    80 2045 70 70 70		    .byte blank8, blank8, blank8
+    81 2048 45 00 40		    .byte antic5 + lms, <screen, >screen
+    82 204B 05 05 05 05 05 05	    .byte antic5, antic5, antic5, antic5, antic5, antic5
+    83 2051 05 05 05 05 05	    .byte antic5, antic5, antic5, antic5, antic5
+    84 2056 41 45 20		    .byte jvb, <dlist, >dlist
+    85
+    86
+    87 2059			scene
+    88 2059 01 02 81 82 01 02 +     .byte 1,2,129,130,1,2,129,130,1,2,129,130
+    89
+    90 2065			chars
+    91
+    92 2065 00			    .byte %00000000
+    93 2066 01				.byte %00000001
+    94 2067 06				.byte %00000110
+    95 2068 1B				.byte %00011011
+    96 2069 1B				.byte %00011011
+    97 206A 06				.byte %00000110
+    98 206B 01				.byte %00000001
+    99 206C 00				.byte %00000000
+   100
+   101 206D 00				.byte %00000000
+   102 206E 40				.byte %01000000
+   103 206F 90				.byte %10010000
+   104 2070 E4				.byte %11100100
+   105 2071 E4				.byte %11100100
+   106 2072 90				.byte %10010000
+   107 2073 40				.byte %01000000
+   108 2074 00				.byte %00000000
