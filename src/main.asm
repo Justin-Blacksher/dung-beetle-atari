@@ -36,8 +36,8 @@ antic7 = 7                  ; Antic mode 7
 
 ; Color Pallett
 bg_black = $00              ; 00 Black
-poop_brown = $12            ; 12 Brown
-poop_peanut = $14           ; 14 yellow-brown
+poop_brown = $f2            ; 12 Brown
+poop_peanut = $f4           ; 14 yellow-brown
 green_grass = $b2           ; b2 Green
 blue_water = $84            ; 84 Blue
 
@@ -57,11 +57,11 @@ loop
     bne loop
 
 ; Change colors
-    mva #poop_brown COLOR0
-    mva #poop_peanut COLOR1
-    mva #green_grass COLOR2
-    mva #blue_water COLOR3
-    mva #bg_black COLOR4
+    mva #poop_brown COLOR0              ; 01
+    mva #poop_peanut COLOR1             ; 10
+    mva #green_grass COLOR2             ; 11
+    mva #blue_water COLOR3              ; 11 (reverse)
+    mva #bg_black COLOR4                ; 00 
     
 
     ldy #0
@@ -85,24 +85,24 @@ dlist
 
 
 scene
-    .byte 1,2,129,130,1,2,129,130,1,2,129,130
+    .byte 1,2,1,2,1,2,1,2,1,2
 
 chars
 
-    .byte %00000000
-	.byte %00000001
-	.byte %00000110
-	.byte %00011011
-	.byte %00011011
-	.byte %00000110
-	.byte %00000001
+    .byte %10101010
+	.byte %10100101
+	.byte %01010101
 	.byte %00000000
-
+	.byte %01010010
+	.byte %01010010
+	.byte %01010010
 	.byte %00000000
-	.byte %01000000
-	.byte %10010000
-	.byte %11100100
-	.byte %11100100
-	.byte %10010000
-	.byte %01000000
+	
+	.byte %01001010
+	.byte %01001010
+	.byte %00001001
+	.byte %00000000
+	.byte %10101001
+	.byte %10010101
+	.byte %01010101
 	.byte %00000000

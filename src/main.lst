@@ -38,14 +38,14 @@ Source: main.asm
     36
     37 				; Color Pallett
     38 = 0000			bg_black = $00              ; 00 Black
-    39 = 0012			poop_brown = $12            ; 12 Brown
-    40 = 0014			poop_peanut = $14           ; 14 yellow-brown
+    39 = 00F2			poop_brown = $f2            ; 12 Brown
+    40 = 00F4			poop_peanut = $f4           ; 14 yellow-brown
     41 = 00B2			green_grass = $b2           ; b2 Green
     42 = 0084			blue_water = $84            ; 84 Blue
     43
     44
     45 				; load display list
-    46 FFFF> 2000-2074> A9 45 +     mwa #dlist SDLSTL
+    46 FFFF> 2000-2072> A9 45 +     mwa #dlist SDLSTL
     47
     48 				; Set up the character set
     49 200A A9 3C 8D F4 02	    mva #>charset CHBAS
@@ -53,17 +53,17 @@ Source: main.asm
     51 200F A2 00		    ldx #0
     52 2011			loop
     53
-    54 2011 BD 65 20 9D 08 3C	    mva chars,x charset+8,x
+    54 2011 BD 63 20 9D 08 3C	    mva chars,x charset+8,x
     55 2017 E8			    inx
     56 2018 E0 10		    cpx #16
     57 201A D0 F5		    bne loop
     58
     59 				; Change colors
-    60 201C A9 12 8D C4 02	    mva #poop_brown COLOR0
-    61 2021 A9 14 8D C5 02	    mva #poop_peanut COLOR1
-    62 2026 A9 B2 8D C6 02	    mva #green_grass COLOR2
-    63 202B A9 84 8D C7 02	    mva #blue_water COLOR3
-    64 2030 A9 00 8D C8 02	    mva #bg_black COLOR4
+    60 201C A9 F2 8D C4 02	    mva #poop_brown COLOR0              ; 01
+    61 2021 A9 F4 8D C5 02	    mva #poop_peanut COLOR1             ; 10
+    62 2026 A9 B2 8D C6 02	    mva #green_grass COLOR2             ; 11
+    63 202B A9 84 8D C7 02	    mva #blue_water COLOR3              ; 11 (reverse)
+    64 2030 A9 00 8D C8 02	    mva #bg_black COLOR4                ; 00 
     65 				    
     66
     67 2035 A0 00		    ldy #0
@@ -87,24 +87,24 @@ Source: main.asm
     85
     86
     87 2059			scene
-    88 2059 01 02 81 82 01 02 +     .byte 1,2,129,130,1,2,129,130,1,2,129,130
+    88 2059 01 02 01 02 01 02 +     .byte 1,2,1,2,1,2,1,2,1,2
     89
-    90 2065			chars
+    90 2063			chars
     91
-    92 2065 00			    .byte %00000000
-    93 2066 01				.byte %00000001
-    94 2067 06				.byte %00000110
-    95 2068 1B				.byte %00011011
-    96 2069 1B				.byte %00011011
-    97 206A 06				.byte %00000110
-    98 206B 01				.byte %00000001
-    99 206C 00				.byte %00000000
-   100
-   101 206D 00				.byte %00000000
-   102 206E 40				.byte %01000000
-   103 206F 90				.byte %10010000
-   104 2070 E4				.byte %11100100
-   105 2071 E4				.byte %11100100
-   106 2072 90				.byte %10010000
-   107 2073 40				.byte %01000000
-   108 2074 00				.byte %00000000
+    92 2063 AA			    .byte %10101010
+    93 2064 A5				.byte %10100101
+    94 2065 55				.byte %01010101
+    95 2066 00				.byte %00000000
+    96 2067 52				.byte %01010010
+    97 2068 52				.byte %01010010
+    98 2069 52				.byte %01010010
+    99 206A 00				.byte %00000000
+   100 					
+   101 206B 4A				.byte %01001010
+   102 206C 4A				.byte %01001010
+   103 206D 09				.byte %00001001
+   104 206E 00				.byte %00000000
+   105 206F A9				.byte %10101001
+   106 2070 95				.byte %10010101
+   107 2071 55				.byte %01010101
+   108 2072 00				.byte %00000000
