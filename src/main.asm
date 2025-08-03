@@ -17,23 +17,9 @@ charset = $3c00             ; Character set
 screen = $4000              ; Screen buffer
 blank8 = $70                ; 8 blank lines
 
-
-
-
-
     setup_screen()          ; Sets up the Screen
     setup_colors()          ; Sets up the colors
-; Set up the character set
-    mva #>charset CHBAS
-    
-    ldx #0
-loop
-
-    mva chars,x charset+8,x
-    inx
-    cpx #16
-    bne loop
-
+    load_gfx()
 
 
     ldy #0
@@ -68,6 +54,23 @@ blue_water = $84                        ; 84 Blue
     rts
     .endp
 
+    ;-------------------------------------------------------
+; Proc: load_gfx
+; Loads the graphics for the game
+;-------------------------------------------------------
+.proc load_gfx
+    ; Set up the character set
+    mva #>charset CHBAS
+    
+    ldx #0
+loop
+
+    mva chars,x charset+8,x
+    inx
+    cpx #16
+    bne loop
+    rts 
+    .endp
 
 scene
     .byte 1,2,1,2,1,2,1,2,1,2
