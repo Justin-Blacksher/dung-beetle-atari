@@ -11,28 +11,12 @@
 
     org $2000
 
-SDLSTL = $0230              ; Display list starting address
-CHBAS = $02f4               ; Character Base Register
-
-; colors
-COLOR0 = $02c4              ; Color for %01
-COLOR1 = $02c5              ; Color for %10
-COLOR2 = $02c6              ; Color for %11
-COLOR3 = $02c7              ; Color for %11 (inverse)
-COLOR4 = $02c8              ; Color for %00 (Background)
+    icl '../lib/hardware.asm'
 
 charset = $3c00             ; Character set
 screen = $4000              ; Screen buffer
 blank8 = $70                ; 8 blank lines
-lms = $40                   ; Load memory scan
-jvb = $41                   ; Jump while vertical blank
 
-antic2 = 2                  ; Antic mode 2
-antic3 = 3                  ; Antic mode 3
-antic4 = 4                  ; Antic mode 4
-antic5 = 5                  ; Antic mode 5
-antic6 = 6                  ; Antic mode 6
-antic7 = 7                  ; Antic mode 7
 
 ; Color Pallett
 bg_black = $00              ; 00 Black
@@ -42,8 +26,7 @@ green_grass = $b2           ; b2 Green
 blue_water = $84            ; 84 Blue
 
 
-; load display list
-    mwa #dlist SDLSTL
+    setup_screen
 
 ; Set up the character set
     mva #>charset CHBAS
@@ -74,18 +57,14 @@ loop2
 
     jmp *
 
+    icl '../lib/dlist.asm'
 
-; Display list
-dlist
-    .byte blank8, blank8, blank8
-    .byte antic5 + lms, <screen, >screen
-    .byte antic5, antic5, antic5, antic5, antic5, antic5
-    .byte antic5, antic5, antic5, antic5, antic5
-    .byte jvb, <dlist, >dlist
+
 
 
 scene
     .byte 1,2,1,2,1,2,1,2,1,2
+
 
 chars
 
