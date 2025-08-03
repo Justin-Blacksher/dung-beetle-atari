@@ -18,16 +18,11 @@ screen = $4000              ; Screen buffer
 blank8 = $70                ; 8 blank lines
 
 
-; Color Pallett
-bg_black = $00              ; 00 Black
-poop_brown = $f2            ; 12 Brown
-poop_peanut = $f4           ; 14 yellow-brown
-green_grass = $b2           ; b2 Green
-blue_water = $84            ; 84 Blue
 
 
-    setup_screen()
 
+    setup_screen()          ; Sets up the Screen
+    setup_colors()          ; Sets up the colors
 ; Set up the character set
     mva #>charset CHBAS
     
@@ -39,13 +34,7 @@ loop
     cpx #16
     bne loop
 
-; Change colors
-    mva #poop_brown COLOR0              ; 01
-    mva #poop_peanut COLOR1             ; 10
-    mva #green_grass COLOR2             ; 11
-    mva #blue_water COLOR3              ; 11 (reverse)
-    mva #bg_black COLOR4                ; 00 
-    
+
 
     ldy #0
 
@@ -59,7 +48,25 @@ loop2
 
     icl '../lib/dlist.asm'
 
-
+; Change colors
+;-------------------------------------------------------
+; Proc: setup_colors
+; Sets up the colors for the game
+;-------------------------------------------------------
+.proc setup_colors
+; Color Pallett
+bg_black = $00                          ; 00 Black
+poop_brown = $f2                        ; f2 Brown
+poop_peanut = $f4                       ; f4 yellow-brown
+green_grass = $b2                       ; b2 Green
+blue_water = $84                        ; 84 Blue 
+    mva #poop_brown COLOR0              ; 01
+    mva #poop_peanut COLOR1             ; 10
+    mva #green_grass COLOR2             ; 11
+    mva #blue_water COLOR3              ; 11 (reverse)
+    mva #bg_black COLOR4                ; 00 
+    rts
+    .endp
 
 
 scene
