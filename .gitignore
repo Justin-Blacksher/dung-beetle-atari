@@ -1,2 +1,6 @@
 /compiler
 /emulation
+*.lab
+*.lst
+*.obx
+*.exe
