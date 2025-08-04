@@ -13,7 +13,20 @@ Source: main.asm
     11
     12 				    org $2000
     13
-    14 				    icl '../lib/hardware.asm'
+    14 				    
+    15
+    16 = 3C00			charset = $3c00             ; Character set
+    17 = 4000			screen = $4000              ; Screen buffer
+    18
+    19
+    20 FFFF> 2000-329C> 20 0F +     setup_screen()          ; Sets up the Screen
+    21 2003 20 2E 30		    setup_colors()          ; Sets up the colors
+    22 2006 20 48 30		    load_gfx()
+    23 2009 20 6D 30		    display_map()
+    24
+    25 200C 4C 0C 20		    jmp *
+    26
+    27 200F			    icl '../lib/hardware.asm'
 Source: hardware.asm
      1 				; Hardware File
      2 = 0230			SDLSTL = $0230              ; Display list starting address
@@ -24,109 +37,4724 @@ Source: hardware.asm
      7 = 02C6			COLOR2 = $02c6              ; Color for %11
      8 = 02C7			COLOR3 = $02c7              ; Color for %11 (inverse)
      9 = 02C8			COLOR4 = $02c8              ; Color for %00 (Background)
-    15
-    16 = 3C00			charset = $3c00             ; Character set
-    17 = 4000			screen = $4000              ; Screen buffer
-    18 = 0070			blank8 = $70                ; 8 blank lines
-    19
-    20 FFFF> 2000-207E> 20 19 +     setup_screen()          ; Sets up the Screen
-    21 2003 20 38 20		    setup_colors()          ; Sets up the colors
-    22 2006 20 52 20		    load_gfx()
-    23
-    24
-    25 2009 A0 00		    ldy #0
-    26
-    27 200B			loop2
-    28 200B B9 65 20 99 00 40	    mva scene,y screen,y
-    29 2011 C8			    iny
-    30 2012 C0 0C		    cpy #12
-    31 2014 D0 F5		    bne loop2
-    32
-    33 2016 4C 16 20		    jmp *
-    34
-    35 2019			    icl '../lib/dlist.asm'
+    28 200F			    icl '../lib/dlist.asm'
 Source: dlist.asm
-     1
-     2 				; Load Display List
-     3 2019			.proc setup_screen
-     4 = 0040			lms = $40                   ; Load memory scan
-     5 = 0041			jvb = $41                   ; Jump while vertical blank
-     6 				; Antic Modes
-     7 = 0002			antic2 = 2                  ; Antic mode 2
-     8 = 0003			antic3 = 3                  ; Antic mode 3
-     9 = 0004			antic4 = 4                  ; Antic mode 4
-    10 = 0005			antic5 = 5                  ; Antic mode 5
-    11 = 0006			antic6 = 6                  ; Antic mode 6
-    12 = 0007			antic7 = 7                  ; Antic mode 7
-    13 2019 A9 24 8D 30 02 A9 +     mwa #dlist SDLSTL
-    14 2023 60			    rts
-    15 				; Display list
-    16 2024			dlist
-    17 2024 70 70 70		    .byte blank8, blank8, blank8
-    18 2027 45 00 40		    .byte antic5 + lms, <screen, >screen
-    19 202A 05 05 05 05 05 05	    .byte antic5, antic5, antic5, antic5, antic5, antic5
-    20 2030 05 05 05 05 05	    .byte antic5, antic5, antic5, antic5, antic5
-    21 2035 41 24 20		    .byte jvb, <dlist, >dlist
-    22 				    .endp
-    36
-    37 				; Change colors
-    38 				;-------------------------------------------------------
-    39 				; Proc: setup_colors
-    40 				; Sets up the colors for the game
-    41 				;-------------------------------------------------------
-    42 2038			.proc setup_colors
-    43 				; Color Pallett
-    44 = 0000			bg_black = $00                          ; 00 Black
-    45 = 00F2			poop_brown = $f2                        ; f2 Brown
-    46 = 00F4			poop_peanut = $f4                       ; f4 yellow-brown
-    47 = 00B2			green_grass = $b2                       ; b2 Green
-    48 = 0084			blue_water = $84                        ; 84 Blue 
-    49 2038 A9 F2 8D C4 02	    mva #poop_brown COLOR0              ; 01
-    50 203D A9 F4 8D C5 02	    mva #poop_peanut COLOR1             ; 10
-    51 2042 A9 B2 8D C6 02	    mva #green_grass COLOR2             ; 11
-    52 2047 A9 84 8D C7 02	    mva #blue_water COLOR3              ; 11 (reverse)
-    53 204C A9 00 8D C8 02	    mva #bg_black COLOR4                ; 00 
-    54 2051 60			    rts
-    55 				    .endp
-    56
-    57 				    ;-------------------------------------------------------
-    58 				; Proc: load_gfx
-    59 				; Loads the graphics for the game
-    60 				;-------------------------------------------------------
-    61 2052			.proc load_gfx
-    62 				    ; Set up the character set
-    63 2052 A9 3C 8D F4 02	    mva #>charset CHBAS
-    64 				    
-    65 2057 A2 00		    ldx #0
-    66 2059			loop
-    67
-    68 2059 BD 6F 20 9D 08 3C	    mva chars,x charset+8,x
-    69 205F E8			    inx
-    70 2060 E0 10		    cpx #16
-    71 2062 D0 F5		    bne loop
-    72 2064 60			    rts 
+     1 				* --------------------------------------- *
+     2 				* Proc: setup_screen                      *
+     3 				* Sets up the display list for the screen *
+     4 				* --------------------------------------- *
+     5 200F			.proc setup_screen
+     6 = 0070			blank8 = $70    ; 8 blank lines
+     7 = 0040			lms = $40	    ; Load Memory Scan
+     8 = 0041			jvb = $41	    ; Jump while vertical blank
+     9
+    10 = 0002			antic2 = 2      ; Antic mode 2
+    11 = 0005			antic5 = 5	    ; Antic mode 5
+    12
+    13 200F A9 1A 8D 30 02 A9 + 	mwa #dlist SDLSTL
+    14 2019 60				rts
+    15
+    16 201A			dlist
+    17 201A 70 70 70			.byte blank8, blank8, blank8
+    18 201D 45 00 40			.byte antic5 + lms, <screen, >screen
+    19 2020 05 05 05 05 05 05		.byte antic5, antic5, antic5, antic5, antic5, antic5
+    20 2026 05 05 05 05 05		.byte antic5, antic5, antic5, antic5, antic5
+    21 202B 41 1A 20			.byte jvb, <dlist, >dlist
+    22 					.endp
+    29 202E			    icl '../lib/gfx.asm'
+Source: gfx.asm
+     1 202E				.local gfx
+     2 					; char 0
+     3 202E FF				.byte %11111111
+     4 202F FF				.byte %11111111
+     5 2030 FF				.byte %11111111
+     6 2031 FF				.byte %11111111
+     7 2032 FF				.byte %11111111
+     8 2033 FF				.byte %11111111
+     9 2034 FF				.byte %11111111
+    10 2035 FF				.byte %11111111
+    11 					; char 1
+    12 2036 FF				.byte %11111111
+    13 2037 FF				.byte %11111111
+    14 2038 FF				.byte %11111111
+    15 2039 FF				.byte %11111111
+    16 203A FF				.byte %11111111
+    17 203B FF				.byte %11111111
+    18 203C FF				.byte %11111111
+    19 203D FF				.byte %11111111
+    20 					; char 2
+    21 203E 00				.byte %00000000
+    22 203F 00				.byte %00000000
+    23 2040 00				.byte %00000000
+    24 2041 00				.byte %00000000
+    25 2042 00				.byte %00000000
+    26 2043 00				.byte %00000000
+    27 2044 00				.byte %00000000
+    28 2045 00				.byte %00000000
+    29 					; char 3
+    30 2046 00				.byte %00000000
+    31 2047 00				.byte %00000000
+    32 2048 00				.byte %00000000
+    33 2049 00				.byte %00000000
+    34 204A 00				.byte %00000000
+    35 204B 00				.byte %00000000
+    36 204C 00				.byte %00000000
+    37 204D 00				.byte %00000000
+    38 					; char 4
+    39 204E FF				.byte %11111111
+    40 204F FF				.byte %11111111
+    41 2050 FF				.byte %11111111
+    42 2051 FF				.byte %11111111
+    43 2052 FF				.byte %11111111
+    44 2053 FF				.byte %11111111
+    45 2054 FF				.byte %11111111
+    46 2055 FF				.byte %11111111
+    47 					; char 5
+    48 2056 FF				.byte %11111111
+    49 2057 FF				.byte %11111111
+    50 2058 FF				.byte %11111111
+    51 2059 FF				.byte %11111111
+    52 205A FF				.byte %11111111
+    53 205B FF				.byte %11111111
+    54 205C FF				.byte %11111111
+    55 205D FF				.byte %11111111
+    56 					; char 6
+    57 205E F5				.byte %11110101
+    58 205F D5				.byte %11010101
+    59 2060 55				.byte %01010101
+    60 2061 55				.byte %01010101
+    61 2062 55				.byte %01010101
+    62 2063 55				.byte %01010101
+    63 2064 D5				.byte %11010101
+    64 2065 F5				.byte %11110101
+    65 					; char 7
+    66 2066 5F				.byte %01011111
+    67 2067 57				.byte %01010111
+    68 2068 55				.byte %01010101
+    69 2069 55				.byte %01010101
+    70 206A 55				.byte %01010101
+    71 206B 55				.byte %01010101
+    72 206C 57				.byte %01010111
+    73 206D 5F				.byte %01011111
+    74 					; char 8
+    75 206E F5				.byte %11110101
+    76 206F D5				.byte %11010101
+    77 2070 65				.byte %01100101
+    78 2071 55				.byte %01010101
+    79 2072 59				.byte %01011001
+    80 2073 65				.byte %01100101
+    81 2074 D5				.byte %11010101
+    82 2075 F6				.byte %11110110
+    83 					; char 9
+    84 2076 5F				.byte %01011111
+    85 2077 97				.byte %10010111
+    86 2078 65				.byte %01100101
+    87 2079 66				.byte %01100110
+    88 207A 55				.byte %01010101
+    89 207B 65				.byte %01100101
+    90 207C 57				.byte %01010111
+    91 207D 5F				.byte %01011111
+    92 					; char 10
+    93 207E F0				.byte %11110000
+    94 207F C0				.byte %11000000
+    95 2080 00				.byte %00000000
+    96 2081 15				.byte %00010101
+    97 2082 01				.byte %00000001
+    98 2083 FD				.byte %11111101
+    99 2084 FD				.byte %11111101
+   100 2085 FD				.byte %11111101
+   101 					; char 11
+   102 2086 0F				.byte %00001111
+   103 2087 43				.byte %01000011
+   104 2088 50				.byte %01010000
+   105 2089 40				.byte %01000000
+   106 208A 40				.byte %01000000
+   107 208B 7F				.byte %01111111
+   108 208C 7F				.byte %01111111
+   109 208D 7F				.byte %01111111
+   110 					; char 12
+   111 208E FF				.byte %11111111
+   112 208F FF				.byte %11111111
+   113 2090 FF				.byte %11111111
+   114 2091 FC				.byte %11111100
+   115 2092 F0				.byte %11110000
+   116 2093 C1				.byte %11000001
+   117 2094 C1				.byte %11000001
+   118 2095 CD				.byte %11001101
+   119 					; char 13
+   120 2096 FF				.byte %11111111
+   121 2097 FF				.byte %11111111
+   122 2098 FF				.byte %11111111
+   123 2099 3F				.byte %00111111
+   124 209A 4F				.byte %01001111
+   125 209B 13				.byte %00010011
+   126 209C 03				.byte %00000011
+   127 209D 73				.byte %01110011
+   128 					; char 14
+   129 209E FF				.byte %11111111
+   130 209F FF				.byte %11111111
+   131 20A0 FF				.byte %11111111
+   132 20A1 FF				.byte %11111111
+   133 20A2 FF				.byte %11111111
+   134 20A3 FF				.byte %11111111
+   135 20A4 FF				.byte %11111111
+   136 20A5 FF				.byte %11111111
+   137 					; char 15
+   138 20A6 FF				.byte %11111111
+   139 20A7 FF				.byte %11111111
+   140 20A8 FF				.byte %11111111
+   141 20A9 FF				.byte %11111111
+   142 20AA FF				.byte %11111111
+   143 20AB FF				.byte %11111111
+   144 20AC FF				.byte %11111111
+   145 20AD FF				.byte %11111111
+   146 					; char 16
+   147 20AE FF				.byte %11111111
+   148 20AF FF				.byte %11111111
+   149 20B0 FF				.byte %11111111
+   150 20B1 FF				.byte %11111111
+   151 20B2 FF				.byte %11111111
+   152 20B3 FF				.byte %11111111
+   153 20B4 FF				.byte %11111111
+   154 20B5 FF				.byte %11111111
+   155 					; char 17
+   156 20B6 FF				.byte %11111111
+   157 20B7 FF				.byte %11111111
+   158 20B8 FF				.byte %11111111
+   159 20B9 FF				.byte %11111111
+   160 20BA FF				.byte %11111111
+   161 20BB FF				.byte %11111111
+   162 20BC FF				.byte %11111111
+   163 20BD FF				.byte %11111111
+   164 					; char 18
+   165 20BE FF				.byte %11111111
+   166 20BF FF				.byte %11111111
+   167 20C0 FF				.byte %11111111
+   168 20C1 FF				.byte %11111111
+   169 20C2 FF				.byte %11111111
+   170 20C3 FF				.byte %11111111
+   171 20C4 FF				.byte %11111111
+   172 20C5 FF				.byte %11111111
+   173 					; char 19
+   174 20C6 FF				.byte %11111111
+   175 20C7 FF				.byte %11111111
+   176 20C8 FF				.byte %11111111
+   177 20C9 FF				.byte %11111111
+   178 20CA FF				.byte %11111111
+   179 20CB FF				.byte %11111111
+   180 20CC FF				.byte %11111111
+   181 20CD FF				.byte %11111111
+   182 					; char 20
+   183 20CE FF				.byte %11111111
+   184 20CF FF				.byte %11111111
+   185 20D0 FF				.byte %11111111
+   186 20D1 FF				.byte %11111111
+   187 20D2 FF				.byte %11111111
+   188 20D3 FF				.byte %11111111
+   189 20D4 FF				.byte %11111111
+   190 20D5 FF				.byte %11111111
+   191 					; char 21
+   192 20D6 FF				.byte %11111111
+   193 20D7 FF				.byte %11111111
+   194 20D8 FF				.byte %11111111
+   195 20D9 FF				.byte %11111111
+   196 20DA FF				.byte %11111111
+   197 20DB FF				.byte %11111111
+   198 20DC FF				.byte %11111111
+   199 20DD FF				.byte %11111111
+   200 					; char 22
+   201 20DE FF				.byte %11111111
+   202 20DF FF				.byte %11111111
+   203 20E0 FF				.byte %11111111
+   204 20E1 FF				.byte %11111111
+   205 20E2 FF				.byte %11111111
+   206 20E3 FF				.byte %11111111
+   207 20E4 FF				.byte %11111111
+   208 20E5 FF				.byte %11111111
+   209 					; char 23
+   210 20E6 FF				.byte %11111111
+   211 20E7 FF				.byte %11111111
+   212 20E8 FF				.byte %11111111
+   213 20E9 FF				.byte %11111111
+   214 20EA FF				.byte %11111111
+   215 20EB FF				.byte %11111111
+   216 20EC FF				.byte %11111111
+   217 20ED FF				.byte %11111111
+   218 					; char 24
+   219 20EE FF				.byte %11111111
+   220 20EF FF				.byte %11111111
+   221 20F0 FF				.byte %11111111
+   222 20F1 FF				.byte %11111111
+   223 20F2 FF				.byte %11111111
+   224 20F3 FF				.byte %11111111
+   225 20F4 FF				.byte %11111111
+   226 20F5 FF				.byte %11111111
+   227 					; char 25
+   228 20F6 FF				.byte %11111111
+   229 20F7 FF				.byte %11111111
+   230 20F8 FF				.byte %11111111
+   231 20F9 FF				.byte %11111111
+   232 20FA FF				.byte %11111111
+   233 20FB FF				.byte %11111111
+   234 20FC FF				.byte %11111111
+   235 20FD FF				.byte %11111111
+   236 					; char 26
+   237 20FE FF				.byte %11111111
+   238 20FF FF				.byte %11111111
+   239 2100 FF				.byte %11111111
+   240 2101 FF				.byte %11111111
+   241 2102 FF				.byte %11111111
+   242 2103 FF				.byte %11111111
+   243 2104 FF				.byte %11111111
+   244 2105 FF				.byte %11111111
+   245 					; char 27
+   246 2106 FF				.byte %11111111
+   247 2107 FF				.byte %11111111
+   248 2108 FF				.byte %11111111
+   249 2109 FF				.byte %11111111
+   250 210A FF				.byte %11111111
+   251 210B FF				.byte %11111111
+   252 210C FF				.byte %11111111
+   253 210D FF				.byte %11111111
+   254 					; char 28
+   255 210E FF				.byte %11111111
+   256 210F FF				.byte %11111111
+   257 2110 FF				.byte %11111111
+   258 2111 FF				.byte %11111111
+   259 2112 FF				.byte %11111111
+   260 2113 FF				.byte %11111111
+   261 2114 FF				.byte %11111111
+   262 2115 FF				.byte %11111111
+   263 					; char 29
+   264 2116 FF				.byte %11111111
+   265 2117 FF				.byte %11111111
+   266 2118 FF				.byte %11111111
+   267 2119 FF				.byte %11111111
+   268 211A FF				.byte %11111111
+   269 211B FF				.byte %11111111
+   270 211C FF				.byte %11111111
+   271 211D FF				.byte %11111111
+   272 					; char 30
+   273 211E FF				.byte %11111111
+   274 211F FF				.byte %11111111
+   275 2120 FF				.byte %11111111
+   276 2121 FF				.byte %11111111
+   277 2122 FF				.byte %11111111
+   278 2123 FF				.byte %11111111
+   279 2124 FF				.byte %11111111
+   280 2125 FF				.byte %11111111
+   281 					; char 31
+   282 2126 FF				.byte %11111111
+   283 2127 FF				.byte %11111111
+   284 2128 FF				.byte %11111111
+   285 2129 FF				.byte %11111111
+   286 212A FF				.byte %11111111
+   287 212B FF				.byte %11111111
+   288 212C FF				.byte %11111111
+   289 212D FF				.byte %11111111
+   290 					; char 32
+   291 212E FF				.byte %11111111
+   292 212F FF				.byte %11111111
+   293 2130 FF				.byte %11111111
+   294 2131 FF				.byte %11111111
+   295 2132 FF				.byte %11111111
+   296 2133 FF				.byte %11111111
+   297 2134 FF				.byte %11111111
+   298 2135 FF				.byte %11111111
+   299 					; char 33
+   300 2136 FF				.byte %11111111
+   301 2137 FF				.byte %11111111
+   302 2138 FF				.byte %11111111
+   303 2139 FF				.byte %11111111
+   304 213A FF				.byte %11111111
+   305 213B FF				.byte %11111111
+   306 213C FF				.byte %11111111
+   307 213D FF				.byte %11111111
+   308 					; char 34
+   309 213E FF				.byte %11111111
+   310 213F FF				.byte %11111111
+   311 2140 FF				.byte %11111111
+   312 2141 FF				.byte %11111111
+   313 2142 FF				.byte %11111111
+   314 2143 FF				.byte %11111111
+   315 2144 FF				.byte %11111111
+   316 2145 FF				.byte %11111111
+   317 					; char 35
+   318 2146 FF				.byte %11111111
+   319 2147 FF				.byte %11111111
+   320 2148 FF				.byte %11111111
+   321 2149 FF				.byte %11111111
+   322 214A FF				.byte %11111111
+   323 214B FF				.byte %11111111
+   324 214C FF				.byte %11111111
+   325 214D FF				.byte %11111111
+   326 					; char 36
+   327 214E FF				.byte %11111111
+   328 214F FF				.byte %11111111
+   329 2150 FF				.byte %11111111
+   330 2151 FF				.byte %11111111
+   331 2152 FF				.byte %11111111
+   332 2153 FF				.byte %11111111
+   333 2154 FF				.byte %11111111
+   334 2155 FF				.byte %11111111
+   335 					; char 37
+   336 2156 FF				.byte %11111111
+   337 2157 FF				.byte %11111111
+   338 2158 FF				.byte %11111111
+   339 2159 FF				.byte %11111111
+   340 215A FF				.byte %11111111
+   341 215B FF				.byte %11111111
+   342 215C FF				.byte %11111111
+   343 215D FF				.byte %11111111
+   344 					; char 38
+   345 215E FF				.byte %11111111
+   346 215F FF				.byte %11111111
+   347 2160 FF				.byte %11111111
+   348 2161 FF				.byte %11111111
+   349 2162 FF				.byte %11111111
+   350 2163 FF				.byte %11111111
+   351 2164 FF				.byte %11111111
+   352 2165 FF				.byte %11111111
+   353 					; char 39
+   354 2166 FF				.byte %11111111
+   355 2167 FF				.byte %11111111
+   356 2168 FF				.byte %11111111
+   357 2169 FF				.byte %11111111
+   358 216A FF				.byte %11111111
+   359 216B FF				.byte %11111111
+   360 216C FF				.byte %11111111
+   361 216D FF				.byte %11111111
+   362 					; char 40
+   363 216E FF				.byte %11111111
+   364 216F FF				.byte %11111111
+   365 2170 FF				.byte %11111111
+   366 2171 FF				.byte %11111111
+   367 2172 FF				.byte %11111111
+   368 2173 FF				.byte %11111111
+   369 2174 FF				.byte %11111111
+   370 2175 FF				.byte %11111111
+   371 					; char 41
+   372 2176 FF				.byte %11111111
+   373 2177 FF				.byte %11111111
+   374 2178 FF				.byte %11111111
+   375 2179 FF				.byte %11111111
+   376 217A FF				.byte %11111111
+   377 217B FF				.byte %11111111
+   378 217C FF				.byte %11111111
+   379 217D FF				.byte %11111111
+   380 					; char 42
+   381 217E FF				.byte %11111111
+   382 217F FF				.byte %11111111
+   383 2180 FF				.byte %11111111
+   384 2181 FF				.byte %11111111
+   385 2182 FF				.byte %11111111
+   386 2183 FF				.byte %11111111
+   387 2184 FF				.byte %11111111
+   388 2185 FF				.byte %11111111
+   389 					; char 43
+   390 2186 FF				.byte %11111111
+   391 2187 FF				.byte %11111111
+   392 2188 FF				.byte %11111111
+   393 2189 FF				.byte %11111111
+   394 218A FF				.byte %11111111
+   395 218B FF				.byte %11111111
+   396 218C FF				.byte %11111111
+   397 218D FF				.byte %11111111
+   398 					; char 44
+   399 218E FF				.byte %11111111
+   400 218F FF				.byte %11111111
+   401 2190 FF				.byte %11111111
+   402 2191 FF				.byte %11111111
+   403 2192 FF				.byte %11111111
+   404 2193 FF				.byte %11111111
+   405 2194 FF				.byte %11111111
+   406 2195 FF				.byte %11111111
+   407 					; char 45
+   408 2196 FF				.byte %11111111
+   409 2197 FF				.byte %11111111
+   410 2198 FF				.byte %11111111
+   411 2199 FF				.byte %11111111
+   412 219A FF				.byte %11111111
+   413 219B FF				.byte %11111111
+   414 219C FF				.byte %11111111
+   415 219D FF				.byte %11111111
+   416 					; char 46
+   417 219E FF				.byte %11111111
+   418 219F FF				.byte %11111111
+   419 21A0 FF				.byte %11111111
+   420 21A1 FF				.byte %11111111
+   421 21A2 FF				.byte %11111111
+   422 21A3 FF				.byte %11111111
+   423 21A4 FF				.byte %11111111
+   424 21A5 FF				.byte %11111111
+   425 					; char 47
+   426 21A6 FF				.byte %11111111
+   427 21A7 FF				.byte %11111111
+   428 21A8 FF				.byte %11111111
+   429 21A9 FF				.byte %11111111
+   430 21AA FF				.byte %11111111
+   431 21AB FF				.byte %11111111
+   432 21AC FF				.byte %11111111
+   433 21AD FF				.byte %11111111
+   434 					; char 48
+   435 21AE FF				.byte %11111111
+   436 21AF FF				.byte %11111111
+   437 21B0 FF				.byte %11111111
+   438 21B1 FF				.byte %11111111
+   439 21B2 FF				.byte %11111111
+   440 21B3 FF				.byte %11111111
+   441 21B4 FF				.byte %11111111
+   442 21B5 FF				.byte %11111111
+   443 					; char 49
+   444 21B6 FF				.byte %11111111
+   445 21B7 FF				.byte %11111111
+   446 21B8 FF				.byte %11111111
+   447 21B9 FF				.byte %11111111
+   448 21BA FF				.byte %11111111
+   449 21BB FF				.byte %11111111
+   450 21BC FF				.byte %11111111
+   451 21BD FF				.byte %11111111
+   452 					; char 50
+   453 21BE FF				.byte %11111111
+   454 21BF FF				.byte %11111111
+   455 21C0 FF				.byte %11111111
+   456 21C1 FF				.byte %11111111
+   457 21C2 FF				.byte %11111111
+   458 21C3 FF				.byte %11111111
+   459 21C4 FF				.byte %11111111
+   460 21C5 FF				.byte %11111111
+   461 					; char 51
+   462 21C6 FF				.byte %11111111
+   463 21C7 FF				.byte %11111111
+   464 21C8 FF				.byte %11111111
+   465 21C9 FF				.byte %11111111
+   466 21CA FF				.byte %11111111
+   467 21CB FF				.byte %11111111
+   468 21CC FF				.byte %11111111
+   469 21CD FF				.byte %11111111
+   470 					; char 52
+   471 21CE FF				.byte %11111111
+   472 21CF FF				.byte %11111111
+   473 21D0 FF				.byte %11111111
+   474 21D1 FF				.byte %11111111
+   475 21D2 FF				.byte %11111111
+   476 21D3 FF				.byte %11111111
+   477 21D4 FF				.byte %11111111
+   478 21D5 FF				.byte %11111111
+   479 					; char 53
+   480 21D6 FF				.byte %11111111
+   481 21D7 FF				.byte %11111111
+   482 21D8 FF				.byte %11111111
+   483 21D9 FF				.byte %11111111
+   484 21DA FF				.byte %11111111
+   485 21DB FF				.byte %11111111
+   486 21DC FF				.byte %11111111
+   487 21DD FF				.byte %11111111
+   488 					; char 54
+   489 21DE FF				.byte %11111111
+   490 21DF FF				.byte %11111111
+   491 21E0 FF				.byte %11111111
+   492 21E1 FF				.byte %11111111
+   493 21E2 FF				.byte %11111111
+   494 21E3 FF				.byte %11111111
+   495 21E4 FF				.byte %11111111
+   496 21E5 FF				.byte %11111111
+   497 					; char 55
+   498 21E6 FF				.byte %11111111
+   499 21E7 FF				.byte %11111111
+   500 21E8 FF				.byte %11111111
+   501 21E9 FF				.byte %11111111
+   502 21EA FF				.byte %11111111
+   503 21EB FF				.byte %11111111
+   504 21EC FF				.byte %11111111
+   505 21ED FF				.byte %11111111
+   506 					; char 56
+   507 21EE FF				.byte %11111111
+   508 21EF FF				.byte %11111111
+   509 21F0 FF				.byte %11111111
+   510 21F1 FF				.byte %11111111
+   511 21F2 FF				.byte %11111111
+   512 21F3 FF				.byte %11111111
+   513 21F4 FF				.byte %11111111
+   514 21F5 FF				.byte %11111111
+   515 					; char 57
+   516 21F6 FF				.byte %11111111
+   517 21F7 FF				.byte %11111111
+   518 21F8 FF				.byte %11111111
+   519 21F9 FF				.byte %11111111
+   520 21FA FF				.byte %11111111
+   521 21FB FF				.byte %11111111
+   522 21FC FF				.byte %11111111
+   523 21FD FF				.byte %11111111
+   524 					; char 58
+   525 21FE FF				.byte %11111111
+   526 21FF FF				.byte %11111111
+   527 2200 FF				.byte %11111111
+   528 2201 FF				.byte %11111111
+   529 2202 FF				.byte %11111111
+   530 2203 FF				.byte %11111111
+   531 2204 FF				.byte %11111111
+   532 2205 FF				.byte %11111111
+   533 					; char 59
+   534 2206 FF				.byte %11111111
+   535 2207 FF				.byte %11111111
+   536 2208 FF				.byte %11111111
+   537 2209 FF				.byte %11111111
+   538 220A FF				.byte %11111111
+   539 220B FF				.byte %11111111
+   540 220C FF				.byte %11111111
+   541 220D FF				.byte %11111111
+   542 					; char 60
+   543 220E FF				.byte %11111111
+   544 220F FF				.byte %11111111
+   545 2210 FF				.byte %11111111
+   546 2211 FF				.byte %11111111
+   547 2212 FF				.byte %11111111
+   548 2213 FF				.byte %11111111
+   549 2214 FF				.byte %11111111
+   550 2215 FF				.byte %11111111
+   551 					; char 61
+   552 2216 FF				.byte %11111111
+   553 2217 FF				.byte %11111111
+   554 2218 FF				.byte %11111111
+   555 2219 FF				.byte %11111111
+   556 221A FF				.byte %11111111
+   557 221B FF				.byte %11111111
+   558 221C FF				.byte %11111111
+   559 221D FF				.byte %11111111
+   560 					; char 62
+   561 221E FF				.byte %11111111
+   562 221F FF				.byte %11111111
+   563 2220 FF				.byte %11111111
+   564 2221 FF				.byte %11111111
+   565 2222 FF				.byte %11111111
+   566 2223 FF				.byte %11111111
+   567 2224 FF				.byte %11111111
+   568 2225 FF				.byte %11111111
+   569 					; char 63
+   570 2226 FF				.byte %11111111
+   571 2227 FF				.byte %11111111
+   572 2228 FF				.byte %11111111
+   573 2229 FF				.byte %11111111
+   574 222A FF				.byte %11111111
+   575 222B FF				.byte %11111111
+   576 222C FF				.byte %11111111
+   577 222D FF				.byte %11111111
+   578 					; char 64
+   579 222E FF				.byte %11111111
+   580 222F FF				.byte %11111111
+   581 2230 FF				.byte %11111111
+   582 2231 FF				.byte %11111111
+   583 2232 FF				.byte %11111111
+   584 2233 FF				.byte %11111111
+   585 2234 FF				.byte %11111111
+   586 2235 FF				.byte %11111111
+   587 					; char 65
+   588 2236 FF				.byte %11111111
+   589 2237 FF				.byte %11111111
+   590 2238 FF				.byte %11111111
+   591 2239 FF				.byte %11111111
+   592 223A FF				.byte %11111111
+   593 223B FF				.byte %11111111
+   594 223C FF				.byte %11111111
+   595 223D FF				.byte %11111111
+   596 					; char 66
+   597 223E FF				.byte %11111111
+   598 223F FF				.byte %11111111
+   599 2240 FF				.byte %11111111
+   600 2241 FF				.byte %11111111
+   601 2242 FF				.byte %11111111
+   602 2243 FF				.byte %11111111
+   603 2244 FF				.byte %11111111
+   604 2245 FF				.byte %11111111
+   605 					; char 67
+   606 2246 FF				.byte %11111111
+   607 2247 FF				.byte %11111111
+   608 2248 FF				.byte %11111111
+   609 2249 FF				.byte %11111111
+   610 224A FF				.byte %11111111
+   611 224B FF				.byte %11111111
+   612 224C FF				.byte %11111111
+   613 224D FF				.byte %11111111
+   614 					; char 68
+   615 224E FF				.byte %11111111
+   616 224F FF				.byte %11111111
+   617 2250 FF				.byte %11111111
+   618 2251 FF				.byte %11111111
+   619 2252 FF				.byte %11111111
+   620 2253 FF				.byte %11111111
+   621 2254 FF				.byte %11111111
+   622 2255 FF				.byte %11111111
+   623 					; char 69
+   624 2256 FF				.byte %11111111
+   625 2257 FF				.byte %11111111
+   626 2258 FF				.byte %11111111
+   627 2259 FF				.byte %11111111
+   628 225A FF				.byte %11111111
+   629 225B FF				.byte %11111111
+   630 225C FF				.byte %11111111
+   631 225D FF				.byte %11111111
+   632 					; char 70
+   633 225E FF				.byte %11111111
+   634 225F FF				.byte %11111111
+   635 2260 FF				.byte %11111111
+   636 2261 FF				.byte %11111111
+   637 2262 FF				.byte %11111111
+   638 2263 FF				.byte %11111111
+   639 2264 FF				.byte %11111111
+   640 2265 FF				.byte %11111111
+   641 					; char 71
+   642 2266 FF				.byte %11111111
+   643 2267 FF				.byte %11111111
+   644 2268 FF				.byte %11111111
+   645 2269 FF				.byte %11111111
+   646 226A FF				.byte %11111111
+   647 226B FF				.byte %11111111
+   648 226C FF				.byte %11111111
+   649 226D FF				.byte %11111111
+   650 					; char 72
+   651 226E FF				.byte %11111111
+   652 226F FF				.byte %11111111
+   653 2270 FF				.byte %11111111
+   654 2271 FF				.byte %11111111
+   655 2272 FF				.byte %11111111
+   656 2273 FF				.byte %11111111
+   657 2274 FF				.byte %11111111
+   658 2275 FF				.byte %11111111
+   659 					; char 73
+   660 2276 FF				.byte %11111111
+   661 2277 FF				.byte %11111111
+   662 2278 FF				.byte %11111111
+   663 2279 FF				.byte %11111111
+   664 227A FF				.byte %11111111
+   665 227B FF				.byte %11111111
+   666 227C FF				.byte %11111111
+   667 227D FF				.byte %11111111
+   668 					; char 74
+   669 227E FF				.byte %11111111
+   670 227F FF				.byte %11111111
+   671 2280 FF				.byte %11111111
+   672 2281 FF				.byte %11111111
+   673 2282 FF				.byte %11111111
+   674 2283 FF				.byte %11111111
+   675 2284 FF				.byte %11111111
+   676 2285 FF				.byte %11111111
+   677 					; char 75
+   678 2286 FF				.byte %11111111
+   679 2287 FF				.byte %11111111
+   680 2288 FF				.byte %11111111
+   681 2289 FF				.byte %11111111
+   682 228A FF				.byte %11111111
+   683 228B FF				.byte %11111111
+   684 228C FF				.byte %11111111
+   685 228D FF				.byte %11111111
+   686 					; char 76
+   687 228E FF				.byte %11111111
+   688 228F FF				.byte %11111111
+   689 2290 FF				.byte %11111111
+   690 2291 FF				.byte %11111111
+   691 2292 FF				.byte %11111111
+   692 2293 FF				.byte %11111111
+   693 2294 FF				.byte %11111111
+   694 2295 FF				.byte %11111111
+   695 					; char 77
+   696 2296 FF				.byte %11111111
+   697 2297 FF				.byte %11111111
+   698 2298 FF				.byte %11111111
+   699 2299 FF				.byte %11111111
+   700 229A FF				.byte %11111111
+   701 229B FF				.byte %11111111
+   702 229C FF				.byte %11111111
+   703 229D FF				.byte %11111111
+   704 					; char 78
+   705 229E FF				.byte %11111111
+   706 229F FF				.byte %11111111
+   707 22A0 FF				.byte %11111111
+   708 22A1 FF				.byte %11111111
+   709 22A2 FF				.byte %11111111
+   710 22A3 FF				.byte %11111111
+   711 22A4 FF				.byte %11111111
+   712 22A5 FF				.byte %11111111
+   713 					; char 79
+   714 22A6 FF				.byte %11111111
+   715 22A7 FF				.byte %11111111
+   716 22A8 FF				.byte %11111111
+   717 22A9 FF				.byte %11111111
+   718 22AA FF				.byte %11111111
+   719 22AB FF				.byte %11111111
+   720 22AC FF				.byte %11111111
+   721 22AD FF				.byte %11111111
+   722 					; char 80
+   723 22AE FF				.byte %11111111
+   724 22AF FF				.byte %11111111
+   725 22B0 FF				.byte %11111111
+   726 22B1 FF				.byte %11111111
+   727 22B2 FF				.byte %11111111
+   728 22B3 FF				.byte %11111111
+   729 22B4 FF				.byte %11111111
+   730 22B5 FF				.byte %11111111
+   731 					; char 81
+   732 22B6 FF				.byte %11111111
+   733 22B7 FF				.byte %11111111
+   734 22B8 FF				.byte %11111111
+   735 22B9 FF				.byte %11111111
+   736 22BA FF				.byte %11111111
+   737 22BB FF				.byte %11111111
+   738 22BC FF				.byte %11111111
+   739 22BD FF				.byte %11111111
+   740 					; char 82
+   741 22BE FF				.byte %11111111
+   742 22BF FF				.byte %11111111
+   743 22C0 FF				.byte %11111111
+   744 22C1 FF				.byte %11111111
+   745 22C2 FF				.byte %11111111
+   746 22C3 FF				.byte %11111111
+   747 22C4 FF				.byte %11111111
+   748 22C5 FF				.byte %11111111
+   749 					; char 83
+   750 22C6 FF				.byte %11111111
+   751 22C7 FF				.byte %11111111
+   752 22C8 FF				.byte %11111111
+   753 22C9 FF				.byte %11111111
+   754 22CA FF				.byte %11111111
+   755 22CB FF				.byte %11111111
+   756 22CC FF				.byte %11111111
+   757 22CD FF				.byte %11111111
+   758 					; char 84
+   759 22CE FF				.byte %11111111
+   760 22CF FF				.byte %11111111
+   761 22D0 FF				.byte %11111111
+   762 22D1 FF				.byte %11111111
+   763 22D2 FF				.byte %11111111
+   764 22D3 FF				.byte %11111111
+   765 22D4 FF				.byte %11111111
+   766 22D5 FF				.byte %11111111
+   767 					; char 85
+   768 22D6 FF				.byte %11111111
+   769 22D7 FF				.byte %11111111
+   770 22D8 FF				.byte %11111111
+   771 22D9 FF				.byte %11111111
+   772 22DA FF				.byte %11111111
+   773 22DB FF				.byte %11111111
+   774 22DC FF				.byte %11111111
+   775 22DD FF				.byte %11111111
+   776 					; char 86
+   777 22DE FF				.byte %11111111
+   778 22DF FF				.byte %11111111
+   779 22E0 FF				.byte %11111111
+   780 22E1 FF				.byte %11111111
+   781 22E2 FF				.byte %11111111
+   782 22E3 FF				.byte %11111111
+   783 22E4 FF				.byte %11111111
+   784 22E5 FF				.byte %11111111
+   785 					; char 87
+   786 22E6 FF				.byte %11111111
+   787 22E7 FF				.byte %11111111
+   788 22E8 FF				.byte %11111111
+   789 22E9 FF				.byte %11111111
+   790 22EA FF				.byte %11111111
+   791 22EB FF				.byte %11111111
+   792 22EC FF				.byte %11111111
+   793 22ED FF				.byte %11111111
+   794 					; char 88
+   795 22EE FF				.byte %11111111
+   796 22EF FF				.byte %11111111
+   797 22F0 FF				.byte %11111111
+   798 22F1 FF				.byte %11111111
+   799 22F2 FF				.byte %11111111
+   800 22F3 FF				.byte %11111111
+   801 22F4 FF				.byte %11111111
+   802 22F5 FF				.byte %11111111
+   803 					; char 89
+   804 22F6 FF				.byte %11111111
+   805 22F7 FF				.byte %11111111
+   806 22F8 FF				.byte %11111111
+   807 22F9 FF				.byte %11111111
+   808 22FA FF				.byte %11111111
+   809 22FB FF				.byte %11111111
+   810 22FC FF				.byte %11111111
+   811 22FD FF				.byte %11111111
+   812 					; char 90
+   813 22FE FF				.byte %11111111
+   814 22FF FF				.byte %11111111
+   815 2300 FF				.byte %11111111
+   816 2301 FF				.byte %11111111
+   817 2302 FF				.byte %11111111
+   818 2303 FF				.byte %11111111
+   819 2304 FF				.byte %11111111
+   820 2305 FF				.byte %11111111
+   821 					; char 91
+   822 2306 FF				.byte %11111111
+   823 2307 FF				.byte %11111111
+   824 2308 FF				.byte %11111111
+   825 2309 FF				.byte %11111111
+   826 230A FF				.byte %11111111
+   827 230B FF				.byte %11111111
+   828 230C FF				.byte %11111111
+   829 230D FF				.byte %11111111
+   830 					; char 92
+   831 230E FF				.byte %11111111
+   832 230F FF				.byte %11111111
+   833 2310 FF				.byte %11111111
+   834 2311 FF				.byte %11111111
+   835 2312 FF				.byte %11111111
+   836 2313 FF				.byte %11111111
+   837 2314 FF				.byte %11111111
+   838 2315 FF				.byte %11111111
+   839 					; char 93
+   840 2316 FF				.byte %11111111
+   841 2317 FF				.byte %11111111
+   842 2318 FF				.byte %11111111
+   843 2319 FF				.byte %11111111
+   844 231A FF				.byte %11111111
+   845 231B FF				.byte %11111111
+   846 231C FF				.byte %11111111
+   847 231D FF				.byte %11111111
+   848 					; char 94
+   849 231E FF				.byte %11111111
+   850 231F FF				.byte %11111111
+   851 2320 FF				.byte %11111111
+   852 2321 FF				.byte %11111111
+   853 2322 FF				.byte %11111111
+   854 2323 FF				.byte %11111111
+   855 2324 FF				.byte %11111111
+   856 2325 FF				.byte %11111111
+   857 					; char 95
+   858 2326 FF				.byte %11111111
+   859 2327 FF				.byte %11111111
+   860 2328 FF				.byte %11111111
+   861 2329 FF				.byte %11111111
+   862 232A FF				.byte %11111111
+   863 232B FF				.byte %11111111
+   864 232C FF				.byte %11111111
+   865 232D FF				.byte %11111111
+   866 					; char 96
+   867 232E FF				.byte %11111111
+   868 232F FF				.byte %11111111
+   869 2330 FF				.byte %11111111
+   870 2331 FF				.byte %11111111
+   871 2332 FF				.byte %11111111
+   872 2333 FF				.byte %11111111
+   873 2334 FF				.byte %11111111
+   874 2335 FF				.byte %11111111
+   875 					; char 97
+   876 2336 FF				.byte %11111111
+   877 2337 FF				.byte %11111111
+   878 2338 FF				.byte %11111111
+   879 2339 FF				.byte %11111111
+   880 233A FF				.byte %11111111
+   881 233B FF				.byte %11111111
+   882 233C FF				.byte %11111111
+   883 233D FF				.byte %11111111
+   884 					; char 98
+   885 233E FF				.byte %11111111
+   886 233F FF				.byte %11111111
+   887 2340 FF				.byte %11111111
+   888 2341 FF				.byte %11111111
+   889 2342 FF				.byte %11111111
+   890 2343 FF				.byte %11111111
+   891 2344 FF				.byte %11111111
+   892 2345 FF				.byte %11111111
+   893 					; char 99
+   894 2346 FF				.byte %11111111
+   895 2347 FF				.byte %11111111
+   896 2348 FF				.byte %11111111
+   897 2349 FF				.byte %11111111
+   898 234A FF				.byte %11111111
+   899 234B FF				.byte %11111111
+   900 234C FF				.byte %11111111
+   901 234D FF				.byte %11111111
+   902 					; char 100
+   903 234E FF				.byte %11111111
+   904 234F FF				.byte %11111111
+   905 2350 FF				.byte %11111111
+   906 2351 FF				.byte %11111111
+   907 2352 FF				.byte %11111111
+   908 2353 FF				.byte %11111111
+   909 2354 FF				.byte %11111111
+   910 2355 FF				.byte %11111111
+   911 					; char 101
+   912 2356 FF				.byte %11111111
+   913 2357 FF				.byte %11111111
+   914 2358 FF				.byte %11111111
+   915 2359 FF				.byte %11111111
+   916 235A FF				.byte %11111111
+   917 235B FF				.byte %11111111
+   918 235C FF				.byte %11111111
+   919 235D FF				.byte %11111111
+   920 					; char 102
+   921 235E FF				.byte %11111111
+   922 235F FF				.byte %11111111
+   923 2360 FF				.byte %11111111
+   924 2361 FF				.byte %11111111
+   925 2362 FF				.byte %11111111
+   926 2363 FF				.byte %11111111
+   927 2364 FF				.byte %11111111
+   928 2365 FF				.byte %11111111
+   929 					; char 103
+   930 2366 FF				.byte %11111111
+   931 2367 FF				.byte %11111111
+   932 2368 FF				.byte %11111111
+   933 2369 FF				.byte %11111111
+   934 236A FF				.byte %11111111
+   935 236B FF				.byte %11111111
+   936 236C FF				.byte %11111111
+   937 236D FF				.byte %11111111
+   938 					; char 104
+   939 236E FF				.byte %11111111
+   940 236F FF				.byte %11111111
+   941 2370 FF				.byte %11111111
+   942 2371 FF				.byte %11111111
+   943 2372 FF				.byte %11111111
+   944 2373 FF				.byte %11111111
+   945 2374 FF				.byte %11111111
+   946 2375 FF				.byte %11111111
+   947 					; char 105
+   948 2376 FF				.byte %11111111
+   949 2377 FF				.byte %11111111
+   950 2378 FF				.byte %11111111
+   951 2379 FF				.byte %11111111
+   952 237A FF				.byte %11111111
+   953 237B FF				.byte %11111111
+   954 237C FF				.byte %11111111
+   955 237D FF				.byte %11111111
+   956 					; char 106
+   957 237E FF				.byte %11111111
+   958 237F FF				.byte %11111111
+   959 2380 FF				.byte %11111111
+   960 2381 FF				.byte %11111111
+   961 2382 FF				.byte %11111111
+   962 2383 FF				.byte %11111111
+   963 2384 FF				.byte %11111111
+   964 2385 FF				.byte %11111111
+   965 					; char 107
+   966 2386 FF				.byte %11111111
+   967 2387 FF				.byte %11111111
+   968 2388 FF				.byte %11111111
+   969 2389 FF				.byte %11111111
+   970 238A FF				.byte %11111111
+   971 238B FF				.byte %11111111
+   972 238C FF				.byte %11111111
+   973 238D FF				.byte %11111111
+   974 					; char 108
+   975 238E FF				.byte %11111111
+   976 238F FF				.byte %11111111
+   977 2390 FF				.byte %11111111
+   978 2391 FF				.byte %11111111
+   979 2392 FF				.byte %11111111
+   980 2393 FF				.byte %11111111
+   981 2394 FF				.byte %11111111
+   982 2395 FF				.byte %11111111
+   983 					; char 109
+   984 2396 FF				.byte %11111111
+   985 2397 FF				.byte %11111111
+   986 2398 FF				.byte %11111111
+   987 2399 FF				.byte %11111111
+   988 239A FF				.byte %11111111
+   989 239B FF				.byte %11111111
+   990 239C FF				.byte %11111111
+   991 239D FF				.byte %11111111
+   992 					; char 110
+   993 239E FF				.byte %11111111
+   994 239F FF				.byte %11111111
+   995 23A0 FF				.byte %11111111
+   996 23A1 FF				.byte %11111111
+   997 23A2 FF				.byte %11111111
+   998 23A3 FF				.byte %11111111
+   999 23A4 FF				.byte %11111111
+  1000 23A5 FF				.byte %11111111
+  1001 					; char 111
+  1002 23A6 FF				.byte %11111111
+  1003 23A7 FF				.byte %11111111
+  1004 23A8 FF				.byte %11111111
+  1005 23A9 FF				.byte %11111111
+  1006 23AA FF				.byte %11111111
+  1007 23AB FF				.byte %11111111
+  1008 23AC FF				.byte %11111111
+  1009 23AD FF				.byte %11111111
+  1010 					; char 112
+  1011 23AE FF				.byte %11111111
+  1012 23AF FF				.byte %11111111
+  1013 23B0 FF				.byte %11111111
+  1014 23B1 FF				.byte %11111111
+  1015 23B2 FF				.byte %11111111
+  1016 23B3 FF				.byte %11111111
+  1017 23B4 FF				.byte %11111111
+  1018 23B5 FF				.byte %11111111
+  1019 					; char 113
+  1020 23B6 FF				.byte %11111111
+  1021 23B7 FF				.byte %11111111
+  1022 23B8 FF				.byte %11111111
+  1023 23B9 FF				.byte %11111111
+  1024 23BA FF				.byte %11111111
+  1025 23BB FF				.byte %11111111
+  1026 23BC FF				.byte %11111111
+  1027 23BD FF				.byte %11111111
+  1028 					; char 114
+  1029 23BE FF				.byte %11111111
+  1030 23BF FF				.byte %11111111
+  1031 23C0 FF				.byte %11111111
+  1032 23C1 FF				.byte %11111111
+  1033 23C2 FF				.byte %11111111
+  1034 23C3 FF				.byte %11111111
+  1035 23C4 FF				.byte %11111111
+  1036 23C5 FF				.byte %11111111
+  1037 					; char 115
+  1038 23C6 FF				.byte %11111111
+  1039 23C7 FF				.byte %11111111
+  1040 23C8 FF				.byte %11111111
+  1041 23C9 FF				.byte %11111111
+  1042 23CA FF				.byte %11111111
+  1043 23CB FF				.byte %11111111
+  1044 23CC FF				.byte %11111111
+  1045 23CD FF				.byte %11111111
+  1046 					; char 116
+  1047 23CE FF				.byte %11111111
+  1048 23CF FF				.byte %11111111
+  1049 23D0 FF				.byte %11111111
+  1050 23D1 FF				.byte %11111111
+  1051 23D2 FF				.byte %11111111
+  1052 23D3 FF				.byte %11111111
+  1053 23D4 FF				.byte %11111111
+  1054 23D5 FF				.byte %11111111
+  1055 					; char 117
+  1056 23D6 FF				.byte %11111111
+  1057 23D7 FF				.byte %11111111
+  1058 23D8 FF				.byte %11111111
+  1059 23D9 FF				.byte %11111111
+  1060 23DA FF				.byte %11111111
+  1061 23DB FF				.byte %11111111
+  1062 23DC FF				.byte %11111111
+  1063 23DD FF				.byte %11111111
+  1064 					; char 118
+  1065 23DE FF				.byte %11111111
+  1066 23DF FF				.byte %11111111
+  1067 23E0 FF				.byte %11111111
+  1068 23E1 FF				.byte %11111111
+  1069 23E2 FF				.byte %11111111
+  1070 23E3 FF				.byte %11111111
+  1071 23E4 FF				.byte %11111111
+  1072 23E5 FF				.byte %11111111
+  1073 					; char 119
+  1074 23E6 FF				.byte %11111111
+  1075 23E7 FF				.byte %11111111
+  1076 23E8 FF				.byte %11111111
+  1077 23E9 FF				.byte %11111111
+  1078 23EA FF				.byte %11111111
+  1079 23EB FF				.byte %11111111
+  1080 23EC FF				.byte %11111111
+  1081 23ED FF				.byte %11111111
+  1082 					; char 120
+  1083 23EE FF				.byte %11111111
+  1084 23EF FF				.byte %11111111
+  1085 23F0 FF				.byte %11111111
+  1086 23F1 FF				.byte %11111111
+  1087 23F2 FF				.byte %11111111
+  1088 23F3 FF				.byte %11111111
+  1089 23F4 FF				.byte %11111111
+  1090 23F5 FF				.byte %11111111
+  1091 					; char 121
+  1092 23F6 FF				.byte %11111111
+  1093 23F7 FF				.byte %11111111
+  1094 23F8 FF				.byte %11111111
+  1095 23F9 FF				.byte %11111111
+  1096 23FA FF				.byte %11111111
+  1097 23FB FF				.byte %11111111
+  1098 23FC FF				.byte %11111111
+  1099 23FD FF				.byte %11111111
+  1100 					; char 122
+  1101 23FE FF				.byte %11111111
+  1102 23FF FF				.byte %11111111
+  1103 2400 FF				.byte %11111111
+  1104 2401 FF				.byte %11111111
+  1105 2402 FF				.byte %11111111
+  1106 2403 FF				.byte %11111111
+  1107 2404 FF				.byte %11111111
+  1108 2405 FF				.byte %11111111
+  1109 					; char 123
+  1110 2406 FF				.byte %11111111
+  1111 2407 FF				.byte %11111111
+  1112 2408 FF				.byte %11111111
+  1113 2409 FF				.byte %11111111
+  1114 240A FF				.byte %11111111
+  1115 240B FF				.byte %11111111
+  1116 240C FF				.byte %11111111
+  1117 240D FF				.byte %11111111
+  1118 					; char 124
+  1119 240E FF				.byte %11111111
+  1120 240F FF				.byte %11111111
+  1121 2410 FF				.byte %11111111
+  1122 2411 FF				.byte %11111111
+  1123 2412 FF				.byte %11111111
+  1124 2413 FF				.byte %11111111
+  1125 2414 FF				.byte %11111111
+  1126 2415 FF				.byte %11111111
+  1127 					; char 125
+  1128 2416 FF				.byte %11111111
+  1129 2417 FF				.byte %11111111
+  1130 2418 FF				.byte %11111111
+  1131 2419 FF				.byte %11111111
+  1132 241A FF				.byte %11111111
+  1133 241B FF				.byte %11111111
+  1134 241C FF				.byte %11111111
+  1135 241D FF				.byte %11111111
+  1136 					; char 126
+  1137 241E FF				.byte %11111111
+  1138 241F FF				.byte %11111111
+  1139 2420 FF				.byte %11111111
+  1140 2421 FF				.byte %11111111
+  1141 2422 FF				.byte %11111111
+  1142 2423 FF				.byte %11111111
+  1143 2424 FF				.byte %11111111
+  1144 2425 FF				.byte %11111111
+  1145 					; char 127
+  1146 2426 FF				.byte %11111111
+  1147 2427 FF				.byte %11111111
+  1148 2428 FF				.byte %11111111
+  1149 2429 FF				.byte %11111111
+  1150 242A FF				.byte %11111111
+  1151 242B FF				.byte %11111111
+  1152 242C FF				.byte %11111111
+  1153 242D FF				.byte %11111111
+  1154 					; char 128
+  1155 242E FF				.byte %11111111
+  1156 242F FF				.byte %11111111
+  1157 2430 FF				.byte %11111111
+  1158 2431 FF				.byte %11111111
+  1159 2432 FF				.byte %11111111
+  1160 2433 FF				.byte %11111111
+  1161 2434 FF				.byte %11111111
+  1162 2435 FF				.byte %11111111
+  1163 					; char 129
+  1164 2436 FF				.byte %11111111
+  1165 2437 FF				.byte %11111111
+  1166 2438 FF				.byte %11111111
+  1167 2439 FF				.byte %11111111
+  1168 243A FF				.byte %11111111
+  1169 243B FF				.byte %11111111
+  1170 243C FF				.byte %11111111
+  1171 243D FF				.byte %11111111
+  1172 					; char 130
+  1173 243E FF				.byte %11111111
+  1174 243F FF				.byte %11111111
+  1175 2440 FF				.byte %11111111
+  1176 2441 FF				.byte %11111111
+  1177 2442 FF				.byte %11111111
+  1178 2443 FF				.byte %11111111
+  1179 2444 FF				.byte %11111111
+  1180 2445 FF				.byte %11111111
+  1181 					; char 131
+  1182 2446 FF				.byte %11111111
+  1183 2447 FF				.byte %11111111
+  1184 2448 FF				.byte %11111111
+  1185 2449 FF				.byte %11111111
+  1186 244A FF				.byte %11111111
+  1187 244B FF				.byte %11111111
+  1188 244C FF				.byte %11111111
+  1189 244D FF				.byte %11111111
+  1190 					; char 132
+  1191 244E FF				.byte %11111111
+  1192 244F FF				.byte %11111111
+  1193 2450 FF				.byte %11111111
+  1194 2451 FF				.byte %11111111
+  1195 2452 FF				.byte %11111111
+  1196 2453 FF				.byte %11111111
+  1197 2454 FF				.byte %11111111
+  1198 2455 FF				.byte %11111111
+  1199 					; char 133
+  1200 2456 FF				.byte %11111111
+  1201 2457 FF				.byte %11111111
+  1202 2458 FF				.byte %11111111
+  1203 2459 FF				.byte %11111111
+  1204 245A FF				.byte %11111111
+  1205 245B FF				.byte %11111111
+  1206 245C FF				.byte %11111111
+  1207 245D FF				.byte %11111111
+  1208 					; char 134
+  1209 245E FF				.byte %11111111
+  1210 245F FF				.byte %11111111
+  1211 2460 FF				.byte %11111111
+  1212 2461 FF				.byte %11111111
+  1213 2462 FF				.byte %11111111
+  1214 2463 FF				.byte %11111111
+  1215 2464 FF				.byte %11111111
+  1216 2465 FF				.byte %11111111
+  1217 					; char 135
+  1218 2466 FF				.byte %11111111
+  1219 2467 FF				.byte %11111111
+  1220 2468 FF				.byte %11111111
+  1221 2469 FF				.byte %11111111
+  1222 246A FF				.byte %11111111
+  1223 246B FF				.byte %11111111
+  1224 246C FF				.byte %11111111
+  1225 246D FF				.byte %11111111
+  1226 					; char 136
+  1227 246E FF				.byte %11111111
+  1228 246F FF				.byte %11111111
+  1229 2470 FF				.byte %11111111
+  1230 2471 FF				.byte %11111111
+  1231 2472 FF				.byte %11111111
+  1232 2473 FF				.byte %11111111
+  1233 2474 FF				.byte %11111111
+  1234 2475 FF				.byte %11111111
+  1235 					; char 137
+  1236 2476 FF				.byte %11111111
+  1237 2477 FF				.byte %11111111
+  1238 2478 FF				.byte %11111111
+  1239 2479 FF				.byte %11111111
+  1240 247A FF				.byte %11111111
+  1241 247B FF				.byte %11111111
+  1242 247C FF				.byte %11111111
+  1243 247D FF				.byte %11111111
+  1244 					; char 138
+  1245 247E FF				.byte %11111111
+  1246 247F FF				.byte %11111111
+  1247 2480 FF				.byte %11111111
+  1248 2481 FF				.byte %11111111
+  1249 2482 FF				.byte %11111111
+  1250 2483 FF				.byte %11111111
+  1251 2484 FF				.byte %11111111
+  1252 2485 FF				.byte %11111111
+  1253 					; char 139
+  1254 2486 FF				.byte %11111111
+  1255 2487 FF				.byte %11111111
+  1256 2488 FF				.byte %11111111
+  1257 2489 FF				.byte %11111111
+  1258 248A FF				.byte %11111111
+  1259 248B FF				.byte %11111111
+  1260 248C FF				.byte %11111111
+  1261 248D FF				.byte %11111111
+  1262 					; char 140
+  1263 248E FF				.byte %11111111
+  1264 248F FF				.byte %11111111
+  1265 2490 FF				.byte %11111111
+  1266 2491 FF				.byte %11111111
+  1267 2492 FF				.byte %11111111
+  1268 2493 FF				.byte %11111111
+  1269 2494 FF				.byte %11111111
+  1270 2495 FF				.byte %11111111
+  1271 					; char 141
+  1272 2496 FF				.byte %11111111
+  1273 2497 FF				.byte %11111111
+  1274 2498 FF				.byte %11111111
+  1275 2499 FF				.byte %11111111
+  1276 249A FF				.byte %11111111
+  1277 249B FF				.byte %11111111
+  1278 249C FF				.byte %11111111
+  1279 249D FF				.byte %11111111
+  1280 					; char 142
+  1281 249E FF				.byte %11111111
+  1282 249F FF				.byte %11111111
+  1283 24A0 FF				.byte %11111111
+  1284 24A1 FF				.byte %11111111
+  1285 24A2 FF				.byte %11111111
+  1286 24A3 FF				.byte %11111111
+  1287 24A4 FF				.byte %11111111
+  1288 24A5 FF				.byte %11111111
+  1289 					; char 143
+  1290 24A6 FF				.byte %11111111
+  1291 24A7 FF				.byte %11111111
+  1292 24A8 FF				.byte %11111111
+  1293 24A9 FF				.byte %11111111
+  1294 24AA FF				.byte %11111111
+  1295 24AB FF				.byte %11111111
+  1296 24AC FF				.byte %11111111
+  1297 24AD FF				.byte %11111111
+  1298 					; char 144
+  1299 24AE FF				.byte %11111111
+  1300 24AF FF				.byte %11111111
+  1301 24B0 FF				.byte %11111111
+  1302 24B1 FF				.byte %11111111
+  1303 24B2 FF				.byte %11111111
+  1304 24B3 FF				.byte %11111111
+  1305 24B4 FF				.byte %11111111
+  1306 24B5 FF				.byte %11111111
+  1307 					; char 145
+  1308 24B6 FF				.byte %11111111
+  1309 24B7 FF				.byte %11111111
+  1310 24B8 FF				.byte %11111111
+  1311 24B9 FF				.byte %11111111
+  1312 24BA FF				.byte %11111111
+  1313 24BB FF				.byte %11111111
+  1314 24BC FF				.byte %11111111
+  1315 24BD FF				.byte %11111111
+  1316 					; char 146
+  1317 24BE FF				.byte %11111111
+  1318 24BF FF				.byte %11111111
+  1319 24C0 FF				.byte %11111111
+  1320 24C1 FF				.byte %11111111
+  1321 24C2 FF				.byte %11111111
+  1322 24C3 FF				.byte %11111111
+  1323 24C4 FF				.byte %11111111
+  1324 24C5 FF				.byte %11111111
+  1325 					; char 147
+  1326 24C6 FF				.byte %11111111
+  1327 24C7 FF				.byte %11111111
+  1328 24C8 FF				.byte %11111111
+  1329 24C9 FF				.byte %11111111
+  1330 24CA FF				.byte %11111111
+  1331 24CB FF				.byte %11111111
+  1332 24CC FF				.byte %11111111
+  1333 24CD FF				.byte %11111111
+  1334 					; char 148
+  1335 24CE FF				.byte %11111111
+  1336 24CF FF				.byte %11111111
+  1337 24D0 FF				.byte %11111111
+  1338 24D1 FF				.byte %11111111
+  1339 24D2 FF				.byte %11111111
+  1340 24D3 FF				.byte %11111111
+  1341 24D4 FF				.byte %11111111
+  1342 24D5 FF				.byte %11111111
+  1343 					; char 149
+  1344 24D6 FF				.byte %11111111
+  1345 24D7 FF				.byte %11111111
+  1346 24D8 FF				.byte %11111111
+  1347 24D9 FF				.byte %11111111
+  1348 24DA FF				.byte %11111111
+  1349 24DB FF				.byte %11111111
+  1350 24DC FF				.byte %11111111
+  1351 24DD FF				.byte %11111111
+  1352 					; char 150
+  1353 24DE FF				.byte %11111111
+  1354 24DF FF				.byte %11111111
+  1355 24E0 FF				.byte %11111111
+  1356 24E1 FF				.byte %11111111
+  1357 24E2 FF				.byte %11111111
+  1358 24E3 FF				.byte %11111111
+  1359 24E4 FF				.byte %11111111
+  1360 24E5 FF				.byte %11111111
+  1361 					; char 151
+  1362 24E6 FF				.byte %11111111
+  1363 24E7 FF				.byte %11111111
+  1364 24E8 FF				.byte %11111111
+  1365 24E9 FF				.byte %11111111
+  1366 24EA FF				.byte %11111111
+  1367 24EB FF				.byte %11111111
+  1368 24EC FF				.byte %11111111
+  1369 24ED FF				.byte %11111111
+  1370 					; char 152
+  1371 24EE FF				.byte %11111111
+  1372 24EF FF				.byte %11111111
+  1373 24F0 FF				.byte %11111111
+  1374 24F1 FF				.byte %11111111
+  1375 24F2 FF				.byte %11111111
+  1376 24F3 FF				.byte %11111111
+  1377 24F4 FF				.byte %11111111
+  1378 24F5 FF				.byte %11111111
+  1379 					; char 153
+  1380 24F6 FF				.byte %11111111
+  1381 24F7 FF				.byte %11111111
+  1382 24F8 FF				.byte %11111111
+  1383 24F9 FF				.byte %11111111
+  1384 24FA FF				.byte %11111111
+  1385 24FB FF				.byte %11111111
+  1386 24FC FF				.byte %11111111
+  1387 24FD FF				.byte %11111111
+  1388 					; char 154
+  1389 24FE FF				.byte %11111111
+  1390 24FF FF				.byte %11111111
+  1391 2500 FF				.byte %11111111
+  1392 2501 FF				.byte %11111111
+  1393 2502 FF				.byte %11111111
+  1394 2503 FF				.byte %11111111
+  1395 2504 FF				.byte %11111111
+  1396 2505 FF				.byte %11111111
+  1397 					; char 155
+  1398 2506 FF				.byte %11111111
+  1399 2507 FF				.byte %11111111
+  1400 2508 FF				.byte %11111111
+  1401 2509 FF				.byte %11111111
+  1402 250A FF				.byte %11111111
+  1403 250B FF				.byte %11111111
+  1404 250C FF				.byte %11111111
+  1405 250D FF				.byte %11111111
+  1406 					; char 156
+  1407 250E FF				.byte %11111111
+  1408 250F FF				.byte %11111111
+  1409 2510 FF				.byte %11111111
+  1410 2511 FF				.byte %11111111
+  1411 2512 FF				.byte %11111111
+  1412 2513 FF				.byte %11111111
+  1413 2514 FF				.byte %11111111
+  1414 2515 FF				.byte %11111111
+  1415 					; char 157
+  1416 2516 FF				.byte %11111111
+  1417 2517 FF				.byte %11111111
+  1418 2518 FF				.byte %11111111
+  1419 2519 FF				.byte %11111111
+  1420 251A FF				.byte %11111111
+  1421 251B FF				.byte %11111111
+  1422 251C FF				.byte %11111111
+  1423 251D FF				.byte %11111111
+  1424 					; char 158
+  1425 251E FF				.byte %11111111
+  1426 251F FF				.byte %11111111
+  1427 2520 FF				.byte %11111111
+  1428 2521 FF				.byte %11111111
+  1429 2522 FF				.byte %11111111
+  1430 2523 FF				.byte %11111111
+  1431 2524 FF				.byte %11111111
+  1432 2525 FF				.byte %11111111
+  1433 					; char 159
+  1434 2526 FF				.byte %11111111
+  1435 2527 FF				.byte %11111111
+  1436 2528 FF				.byte %11111111
+  1437 2529 FF				.byte %11111111
+  1438 252A FF				.byte %11111111
+  1439 252B FF				.byte %11111111
+  1440 252C FF				.byte %11111111
+  1441 252D FF				.byte %11111111
+  1442 					; char 160
+  1443 252E FF				.byte %11111111
+  1444 252F FF				.byte %11111111
+  1445 2530 FF				.byte %11111111
+  1446 2531 FF				.byte %11111111
+  1447 2532 FF				.byte %11111111
+  1448 2533 FF				.byte %11111111
+  1449 2534 FF				.byte %11111111
+  1450 2535 FF				.byte %11111111
+  1451 					; char 161
+  1452 2536 FF				.byte %11111111
+  1453 2537 FF				.byte %11111111
+  1454 2538 FF				.byte %11111111
+  1455 2539 FF				.byte %11111111
+  1456 253A FF				.byte %11111111
+  1457 253B FF				.byte %11111111
+  1458 253C FF				.byte %11111111
+  1459 253D FF				.byte %11111111
+  1460 					; char 162
+  1461 253E FF				.byte %11111111
+  1462 253F FF				.byte %11111111
+  1463 2540 FF				.byte %11111111
+  1464 2541 FF				.byte %11111111
+  1465 2542 FF				.byte %11111111
+  1466 2543 FF				.byte %11111111
+  1467 2544 FF				.byte %11111111
+  1468 2545 FF				.byte %11111111
+  1469 					; char 163
+  1470 2546 FF				.byte %11111111
+  1471 2547 FF				.byte %11111111
+  1472 2548 FF				.byte %11111111
+  1473 2549 FF				.byte %11111111
+  1474 254A FF				.byte %11111111
+  1475 254B FF				.byte %11111111
+  1476 254C FF				.byte %11111111
+  1477 254D FF				.byte %11111111
+  1478 					; char 164
+  1479 254E FF				.byte %11111111
+  1480 254F FF				.byte %11111111
+  1481 2550 FF				.byte %11111111
+  1482 2551 FF				.byte %11111111
+  1483 2552 FF				.byte %11111111
+  1484 2553 FF				.byte %11111111
+  1485 2554 FF				.byte %11111111
+  1486 2555 FF				.byte %11111111
+  1487 					; char 165
+  1488 2556 FF				.byte %11111111
+  1489 2557 FF				.byte %11111111
+  1490 2558 FF				.byte %11111111
+  1491 2559 FF				.byte %11111111
+  1492 255A FF				.byte %11111111
+  1493 255B FF				.byte %11111111
+  1494 255C FF				.byte %11111111
+  1495 255D FF				.byte %11111111
+  1496 					; char 166
+  1497 255E FF				.byte %11111111
+  1498 255F FF				.byte %11111111
+  1499 2560 FF				.byte %11111111
+  1500 2561 FF				.byte %11111111
+  1501 2562 FF				.byte %11111111
+  1502 2563 FF				.byte %11111111
+  1503 2564 FF				.byte %11111111
+  1504 2565 FF				.byte %11111111
+  1505 					; char 167
+  1506 2566 FF				.byte %11111111
+  1507 2567 FF				.byte %11111111
+  1508 2568 FF				.byte %11111111
+  1509 2569 FF				.byte %11111111
+  1510 256A FF				.byte %11111111
+  1511 256B FF				.byte %11111111
+  1512 256C FF				.byte %11111111
+  1513 256D FF				.byte %11111111
+  1514 					; char 168
+  1515 256E FF				.byte %11111111
+  1516 256F FF				.byte %11111111
+  1517 2570 FF				.byte %11111111
+  1518 2571 FF				.byte %11111111
+  1519 2572 FF				.byte %11111111
+  1520 2573 FF				.byte %11111111
+  1521 2574 FF				.byte %11111111
+  1522 2575 FF				.byte %11111111
+  1523 					; char 169
+  1524 2576 FF				.byte %11111111
+  1525 2577 FF				.byte %11111111
+  1526 2578 FF				.byte %11111111
+  1527 2579 FF				.byte %11111111
+  1528 257A FF				.byte %11111111
+  1529 257B FF				.byte %11111111
+  1530 257C FF				.byte %11111111
+  1531 257D FF				.byte %11111111
+  1532 					; char 170
+  1533 257E FF				.byte %11111111
+  1534 257F FF				.byte %11111111
+  1535 2580 FF				.byte %11111111
+  1536 2581 FF				.byte %11111111
+  1537 2582 FF				.byte %11111111
+  1538 2583 FF				.byte %11111111
+  1539 2584 FF				.byte %11111111
+  1540 2585 FF				.byte %11111111
+  1541 					; char 171
+  1542 2586 FF				.byte %11111111
+  1543 2587 FF				.byte %11111111
+  1544 2588 FF				.byte %11111111
+  1545 2589 FF				.byte %11111111
+  1546 258A FF				.byte %11111111
+  1547 258B FF				.byte %11111111
+  1548 258C FF				.byte %11111111
+  1549 258D FF				.byte %11111111
+  1550 					; char 172
+  1551 258E FF				.byte %11111111
+  1552 258F FF				.byte %11111111
+  1553 2590 FF				.byte %11111111
+  1554 2591 FF				.byte %11111111
+  1555 2592 FF				.byte %11111111
+  1556 2593 FF				.byte %11111111
+  1557 2594 FF				.byte %11111111
+  1558 2595 FF				.byte %11111111
+  1559 					; char 173
+  1560 2596 FF				.byte %11111111
+  1561 2597 FF				.byte %11111111
+  1562 2598 FF				.byte %11111111
+  1563 2599 FF				.byte %11111111
+  1564 259A FF				.byte %11111111
+  1565 259B FF				.byte %11111111
+  1566 259C FF				.byte %11111111
+  1567 259D FF				.byte %11111111
+  1568 					; char 174
+  1569 259E FF				.byte %11111111
+  1570 259F FF				.byte %11111111
+  1571 25A0 FF				.byte %11111111
+  1572 25A1 FF				.byte %11111111
+  1573 25A2 FF				.byte %11111111
+  1574 25A3 FF				.byte %11111111
+  1575 25A4 FF				.byte %11111111
+  1576 25A5 FF				.byte %11111111
+  1577 					; char 175
+  1578 25A6 FF				.byte %11111111
+  1579 25A7 FF				.byte %11111111
+  1580 25A8 FF				.byte %11111111
+  1581 25A9 FF				.byte %11111111
+  1582 25AA FF				.byte %11111111
+  1583 25AB FF				.byte %11111111
+  1584 25AC FF				.byte %11111111
+  1585 25AD FF				.byte %11111111
+  1586 					; char 176
+  1587 25AE FF				.byte %11111111
+  1588 25AF FF				.byte %11111111
+  1589 25B0 FF				.byte %11111111
+  1590 25B1 FF				.byte %11111111
+  1591 25B2 FF				.byte %11111111
+  1592 25B3 FF				.byte %11111111
+  1593 25B4 FF				.byte %11111111
+  1594 25B5 FF				.byte %11111111
+  1595 					; char 177
+  1596 25B6 FF				.byte %11111111
+  1597 25B7 FF				.byte %11111111
+  1598 25B8 FF				.byte %11111111
+  1599 25B9 FF				.byte %11111111
+  1600 25BA FF				.byte %11111111
+  1601 25BB FF				.byte %11111111
+  1602 25BC FF				.byte %11111111
+  1603 25BD FF				.byte %11111111
+  1604 					; char 178
+  1605 25BE FF				.byte %11111111
+  1606 25BF FF				.byte %11111111
+  1607 25C0 FF				.byte %11111111
+  1608 25C1 FF				.byte %11111111
+  1609 25C2 FF				.byte %11111111
+  1610 25C3 FF				.byte %11111111
+  1611 25C4 FF				.byte %11111111
+  1612 25C5 FF				.byte %11111111
+  1613 					; char 179
+  1614 25C6 FF				.byte %11111111
+  1615 25C7 FF				.byte %11111111
+  1616 25C8 FF				.byte %11111111
+  1617 25C9 FF				.byte %11111111
+  1618 25CA FF				.byte %11111111
+  1619 25CB FF				.byte %11111111
+  1620 25CC FF				.byte %11111111
+  1621 25CD FF				.byte %11111111
+  1622 					; char 180
+  1623 25CE FF				.byte %11111111
+  1624 25CF FF				.byte %11111111
+  1625 25D0 FF				.byte %11111111
+  1626 25D1 FF				.byte %11111111
+  1627 25D2 FF				.byte %11111111
+  1628 25D3 FF				.byte %11111111
+  1629 25D4 FF				.byte %11111111
+  1630 25D5 FF				.byte %11111111
+  1631 					; char 181
+  1632 25D6 FF				.byte %11111111
+  1633 25D7 FF				.byte %11111111
+  1634 25D8 FF				.byte %11111111
+  1635 25D9 FF				.byte %11111111
+  1636 25DA FF				.byte %11111111
+  1637 25DB FF				.byte %11111111
+  1638 25DC FF				.byte %11111111
+  1639 25DD FF				.byte %11111111
+  1640 					; char 182
+  1641 25DE FF				.byte %11111111
+  1642 25DF FF				.byte %11111111
+  1643 25E0 FF				.byte %11111111
+  1644 25E1 FF				.byte %11111111
+  1645 25E2 FF				.byte %11111111
+  1646 25E3 FF				.byte %11111111
+  1647 25E4 FF				.byte %11111111
+  1648 25E5 FF				.byte %11111111
+  1649 					; char 183
+  1650 25E6 FF				.byte %11111111
+  1651 25E7 FF				.byte %11111111
+  1652 25E8 FF				.byte %11111111
+  1653 25E9 FF				.byte %11111111
+  1654 25EA FF				.byte %11111111
+  1655 25EB FF				.byte %11111111
+  1656 25EC FF				.byte %11111111
+  1657 25ED FF				.byte %11111111
+  1658 					; char 184
+  1659 25EE FF				.byte %11111111
+  1660 25EF FF				.byte %11111111
+  1661 25F0 FF				.byte %11111111
+  1662 25F1 FF				.byte %11111111
+  1663 25F2 FF				.byte %11111111
+  1664 25F3 FF				.byte %11111111
+  1665 25F4 FF				.byte %11111111
+  1666 25F5 FF				.byte %11111111
+  1667 					; char 185
+  1668 25F6 FF				.byte %11111111
+  1669 25F7 FF				.byte %11111111
+  1670 25F8 FF				.byte %11111111
+  1671 25F9 FF				.byte %11111111
+  1672 25FA FF				.byte %11111111
+  1673 25FB FF				.byte %11111111
+  1674 25FC FF				.byte %11111111
+  1675 25FD FF				.byte %11111111
+  1676 					; char 186
+  1677 25FE FF				.byte %11111111
+  1678 25FF FF				.byte %11111111
+  1679 2600 FF				.byte %11111111
+  1680 2601 FF				.byte %11111111
+  1681 2602 FF				.byte %11111111
+  1682 2603 FF				.byte %11111111
+  1683 2604 FF				.byte %11111111
+  1684 2605 FF				.byte %11111111
+  1685 					; char 187
+  1686 2606 FF				.byte %11111111
+  1687 2607 FF				.byte %11111111
+  1688 2608 FF				.byte %11111111
+  1689 2609 FF				.byte %11111111
+  1690 260A FF				.byte %11111111
+  1691 260B FF				.byte %11111111
+  1692 260C FF				.byte %11111111
+  1693 260D FF				.byte %11111111
+  1694 					; char 188
+  1695 260E FF				.byte %11111111
+  1696 260F FF				.byte %11111111
+  1697 2610 FF				.byte %11111111
+  1698 2611 FF				.byte %11111111
+  1699 2612 FF				.byte %11111111
+  1700 2613 FF				.byte %11111111
+  1701 2614 FF				.byte %11111111
+  1702 2615 FF				.byte %11111111
+  1703 					; char 189
+  1704 2616 FF				.byte %11111111
+  1705 2617 FF				.byte %11111111
+  1706 2618 FF				.byte %11111111
+  1707 2619 FF				.byte %11111111
+  1708 261A FF				.byte %11111111
+  1709 261B FF				.byte %11111111
+  1710 261C FF				.byte %11111111
+  1711 261D FF				.byte %11111111
+  1712 					; char 190
+  1713 261E FF				.byte %11111111
+  1714 261F FF				.byte %11111111
+  1715 2620 FF				.byte %11111111
+  1716 2621 FF				.byte %11111111
+  1717 2622 FF				.byte %11111111
+  1718 2623 FF				.byte %11111111
+  1719 2624 FF				.byte %11111111
+  1720 2625 FF				.byte %11111111
+  1721 					; char 191
+  1722 2626 FF				.byte %11111111
+  1723 2627 FF				.byte %11111111
+  1724 2628 FF				.byte %11111111
+  1725 2629 FF				.byte %11111111
+  1726 262A FF				.byte %11111111
+  1727 262B FF				.byte %11111111
+  1728 262C FF				.byte %11111111
+  1729 262D FF				.byte %11111111
+  1730 					; char 192
+  1731 262E FF				.byte %11111111
+  1732 262F FF				.byte %11111111
+  1733 2630 FF				.byte %11111111
+  1734 2631 FF				.byte %11111111
+  1735 2632 FF				.byte %11111111
+  1736 2633 FF				.byte %11111111
+  1737 2634 FF				.byte %11111111
+  1738 2635 FF				.byte %11111111
+  1739 					; char 193
+  1740 2636 FF				.byte %11111111
+  1741 2637 FF				.byte %11111111
+  1742 2638 FF				.byte %11111111
+  1743 2639 FF				.byte %11111111
+  1744 263A FF				.byte %11111111
+  1745 263B FF				.byte %11111111
+  1746 263C FF				.byte %11111111
+  1747 263D FF				.byte %11111111
+  1748 					; char 194
+  1749 263E FF				.byte %11111111
+  1750 263F FF				.byte %11111111
+  1751 2640 FF				.byte %11111111
+  1752 2641 FF				.byte %11111111
+  1753 2642 FF				.byte %11111111
+  1754 2643 FF				.byte %11111111
+  1755 2644 FF				.byte %11111111
+  1756 2645 FF				.byte %11111111
+  1757 					; char 195
+  1758 2646 FF				.byte %11111111
+  1759 2647 FF				.byte %11111111
+  1760 2648 FF				.byte %11111111
+  1761 2649 FF				.byte %11111111
+  1762 264A FF				.byte %11111111
+  1763 264B FF				.byte %11111111
+  1764 264C FF				.byte %11111111
+  1765 264D FF				.byte %11111111
+  1766 					; char 196
+  1767 264E FF				.byte %11111111
+  1768 264F FF				.byte %11111111
+  1769 2650 FF				.byte %11111111
+  1770 2651 FF				.byte %11111111
+  1771 2652 FF				.byte %11111111
+  1772 2653 FF				.byte %11111111
+  1773 2654 FF				.byte %11111111
+  1774 2655 FF				.byte %11111111
+  1775 					; char 197
+  1776 2656 FF				.byte %11111111
+  1777 2657 FF				.byte %11111111
+  1778 2658 FF				.byte %11111111
+  1779 2659 FF				.byte %11111111
+  1780 265A FF				.byte %11111111
+  1781 265B FF				.byte %11111111
+  1782 265C FF				.byte %11111111
+  1783 265D FF				.byte %11111111
+  1784 					; char 198
+  1785 265E FF				.byte %11111111
+  1786 265F FF				.byte %11111111
+  1787 2660 FF				.byte %11111111
+  1788 2661 FF				.byte %11111111
+  1789 2662 FF				.byte %11111111
+  1790 2663 FF				.byte %11111111
+  1791 2664 FF				.byte %11111111
+  1792 2665 FF				.byte %11111111
+  1793 					; char 199
+  1794 2666 FF				.byte %11111111
+  1795 2667 FF				.byte %11111111
+  1796 2668 FF				.byte %11111111
+  1797 2669 FF				.byte %11111111
+  1798 266A FF				.byte %11111111
+  1799 266B FF				.byte %11111111
+  1800 266C FF				.byte %11111111
+  1801 266D FF				.byte %11111111
+  1802 					; char 200
+  1803 266E FF				.byte %11111111
+  1804 266F FF				.byte %11111111
+  1805 2670 FF				.byte %11111111
+  1806 2671 FF				.byte %11111111
+  1807 2672 FF				.byte %11111111
+  1808 2673 FF				.byte %11111111
+  1809 2674 FF				.byte %11111111
+  1810 2675 FF				.byte %11111111
+  1811 					; char 201
+  1812 2676 FF				.byte %11111111
+  1813 2677 FF				.byte %11111111
+  1814 2678 FF				.byte %11111111
+  1815 2679 FF				.byte %11111111
+  1816 267A FF				.byte %11111111
+  1817 267B FF				.byte %11111111
+  1818 267C FF				.byte %11111111
+  1819 267D FF				.byte %11111111
+  1820 					; char 202
+  1821 267E FF				.byte %11111111
+  1822 267F FF				.byte %11111111
+  1823 2680 FF				.byte %11111111
+  1824 2681 FF				.byte %11111111
+  1825 2682 FF				.byte %11111111
+  1826 2683 FF				.byte %11111111
+  1827 2684 FF				.byte %11111111
+  1828 2685 FF				.byte %11111111
+  1829 					; char 203
+  1830 2686 FF				.byte %11111111
+  1831 2687 FF				.byte %11111111
+  1832 2688 FF				.byte %11111111
+  1833 2689 FF				.byte %11111111
+  1834 268A FF				.byte %11111111
+  1835 268B FF				.byte %11111111
+  1836 268C FF				.byte %11111111
+  1837 268D FF				.byte %11111111
+  1838 					; char 204
+  1839 268E FF				.byte %11111111
+  1840 268F FF				.byte %11111111
+  1841 2690 FF				.byte %11111111
+  1842 2691 FF				.byte %11111111
+  1843 2692 FF				.byte %11111111
+  1844 2693 FF				.byte %11111111
+  1845 2694 FF				.byte %11111111
+  1846 2695 FF				.byte %11111111
+  1847 					; char 205
+  1848 2696 FF				.byte %11111111
+  1849 2697 FF				.byte %11111111
+  1850 2698 FF				.byte %11111111
+  1851 2699 FF				.byte %11111111
+  1852 269A FF				.byte %11111111
+  1853 269B FF				.byte %11111111
+  1854 269C FF				.byte %11111111
+  1855 269D FF				.byte %11111111
+  1856 					; char 206
+  1857 269E FF				.byte %11111111
+  1858 269F FF				.byte %11111111
+  1859 26A0 FF				.byte %11111111
+  1860 26A1 FF				.byte %11111111
+  1861 26A2 FF				.byte %11111111
+  1862 26A3 FF				.byte %11111111
+  1863 26A4 FF				.byte %11111111
+  1864 26A5 FF				.byte %11111111
+  1865 					; char 207
+  1866 26A6 FF				.byte %11111111
+  1867 26A7 FF				.byte %11111111
+  1868 26A8 FF				.byte %11111111
+  1869 26A9 FF				.byte %11111111
+  1870 26AA FF				.byte %11111111
+  1871 26AB FF				.byte %11111111
+  1872 26AC FF				.byte %11111111
+  1873 26AD FF				.byte %11111111
+  1874 					; char 208
+  1875 26AE FF				.byte %11111111
+  1876 26AF FF				.byte %11111111
+  1877 26B0 FF				.byte %11111111
+  1878 26B1 FF				.byte %11111111
+  1879 26B2 FF				.byte %11111111
+  1880 26B3 FF				.byte %11111111
+  1881 26B4 FF				.byte %11111111
+  1882 26B5 FF				.byte %11111111
+  1883 					; char 209
+  1884 26B6 FF				.byte %11111111
+  1885 26B7 FF				.byte %11111111
+  1886 26B8 FF				.byte %11111111
+  1887 26B9 FF				.byte %11111111
+  1888 26BA FF				.byte %11111111
+  1889 26BB FF				.byte %11111111
+  1890 26BC FF				.byte %11111111
+  1891 26BD FF				.byte %11111111
+  1892 					; char 210
+  1893 26BE FF				.byte %11111111
+  1894 26BF FF				.byte %11111111
+  1895 26C0 FF				.byte %11111111
+  1896 26C1 FF				.byte %11111111
+  1897 26C2 FF				.byte %11111111
+  1898 26C3 FF				.byte %11111111
+  1899 26C4 FF				.byte %11111111
+  1900 26C5 FF				.byte %11111111
+  1901 					; char 211
+  1902 26C6 FF				.byte %11111111
+  1903 26C7 FF				.byte %11111111
+  1904 26C8 FF				.byte %11111111
+  1905 26C9 FF				.byte %11111111
+  1906 26CA FF				.byte %11111111
+  1907 26CB FF				.byte %11111111
+  1908 26CC FF				.byte %11111111
+  1909 26CD FF				.byte %11111111
+  1910 					; char 212
+  1911 26CE FF				.byte %11111111
+  1912 26CF FF				.byte %11111111
+  1913 26D0 FF				.byte %11111111
+  1914 26D1 FF				.byte %11111111
+  1915 26D2 FF				.byte %11111111
+  1916 26D3 FF				.byte %11111111
+  1917 26D4 FF				.byte %11111111
+  1918 26D5 FF				.byte %11111111
+  1919 					; char 213
+  1920 26D6 FF				.byte %11111111
+  1921 26D7 FF				.byte %11111111
+  1922 26D8 FF				.byte %11111111
+  1923 26D9 FF				.byte %11111111
+  1924 26DA FF				.byte %11111111
+  1925 26DB FF				.byte %11111111
+  1926 26DC FF				.byte %11111111
+  1927 26DD FF				.byte %11111111
+  1928 					; char 214
+  1929 26DE FF				.byte %11111111
+  1930 26DF FF				.byte %11111111
+  1931 26E0 FF				.byte %11111111
+  1932 26E1 FF				.byte %11111111
+  1933 26E2 FF				.byte %11111111
+  1934 26E3 FF				.byte %11111111
+  1935 26E4 FF				.byte %11111111
+  1936 26E5 FF				.byte %11111111
+  1937 					; char 215
+  1938 26E6 FF				.byte %11111111
+  1939 26E7 FF				.byte %11111111
+  1940 26E8 FF				.byte %11111111
+  1941 26E9 FF				.byte %11111111
+  1942 26EA FF				.byte %11111111
+  1943 26EB FF				.byte %11111111
+  1944 26EC FF				.byte %11111111
+  1945 26ED FF				.byte %11111111
+  1946 					; char 216
+  1947 26EE FF				.byte %11111111
+  1948 26EF FF				.byte %11111111
+  1949 26F0 FF				.byte %11111111
+  1950 26F1 FF				.byte %11111111
+  1951 26F2 FF				.byte %11111111
+  1952 26F3 FF				.byte %11111111
+  1953 26F4 FF				.byte %11111111
+  1954 26F5 FF				.byte %11111111
+  1955 					; char 217
+  1956 26F6 FF				.byte %11111111
+  1957 26F7 FF				.byte %11111111
+  1958 26F8 FF				.byte %11111111
+  1959 26F9 FF				.byte %11111111
+  1960 26FA FF				.byte %11111111
+  1961 26FB FF				.byte %11111111
+  1962 26FC FF				.byte %11111111
+  1963 26FD FF				.byte %11111111
+  1964 					; char 218
+  1965 26FE FF				.byte %11111111
+  1966 26FF FF				.byte %11111111
+  1967 2700 FF				.byte %11111111
+  1968 2701 FF				.byte %11111111
+  1969 2702 FF				.byte %11111111
+  1970 2703 FF				.byte %11111111
+  1971 2704 FF				.byte %11111111
+  1972 2705 FF				.byte %11111111
+  1973 					; char 219
+  1974 2706 FF				.byte %11111111
+  1975 2707 FF				.byte %11111111
+  1976 2708 FF				.byte %11111111
+  1977 2709 FF				.byte %11111111
+  1978 270A FF				.byte %11111111
+  1979 270B FF				.byte %11111111
+  1980 270C FF				.byte %11111111
+  1981 270D FF				.byte %11111111
+  1982 					; char 220
+  1983 270E FF				.byte %11111111
+  1984 270F FF				.byte %11111111
+  1985 2710 FF				.byte %11111111
+  1986 2711 FF				.byte %11111111
+  1987 2712 FF				.byte %11111111
+  1988 2713 FF				.byte %11111111
+  1989 2714 FF				.byte %11111111
+  1990 2715 FF				.byte %11111111
+  1991 					; char 221
+  1992 2716 FF				.byte %11111111
+  1993 2717 FF				.byte %11111111
+  1994 2718 FF				.byte %11111111
+  1995 2719 FF				.byte %11111111
+  1996 271A FF				.byte %11111111
+  1997 271B FF				.byte %11111111
+  1998 271C FF				.byte %11111111
+  1999 271D FF				.byte %11111111
+  2000 					; char 222
+  2001 271E FF				.byte %11111111
+  2002 271F FF				.byte %11111111
+  2003 2720 FF				.byte %11111111
+  2004 2721 FF				.byte %11111111
+  2005 2722 FF				.byte %11111111
+  2006 2723 FF				.byte %11111111
+  2007 2724 FF				.byte %11111111
+  2008 2725 FF				.byte %11111111
+  2009 					; char 223
+  2010 2726 FF				.byte %11111111
+  2011 2727 FF				.byte %11111111
+  2012 2728 FF				.byte %11111111
+  2013 2729 FF				.byte %11111111
+  2014 272A FF				.byte %11111111
+  2015 272B FF				.byte %11111111
+  2016 272C FF				.byte %11111111
+  2017 272D FF				.byte %11111111
+  2018 					; char 224
+  2019 272E FF				.byte %11111111
+  2020 272F FF				.byte %11111111
+  2021 2730 FF				.byte %11111111
+  2022 2731 FF				.byte %11111111
+  2023 2732 FF				.byte %11111111
+  2024 2733 FF				.byte %11111111
+  2025 2734 FF				.byte %11111111
+  2026 2735 FF				.byte %11111111
+  2027 					; char 225
+  2028 2736 FF				.byte %11111111
+  2029 2737 FF				.byte %11111111
+  2030 2738 FF				.byte %11111111
+  2031 2739 FF				.byte %11111111
+  2032 273A FF				.byte %11111111
+  2033 273B FF				.byte %11111111
+  2034 273C FF				.byte %11111111
+  2035 273D FF				.byte %11111111
+  2036 					; char 226
+  2037 273E FF				.byte %11111111
+  2038 273F FF				.byte %11111111
+  2039 2740 FF				.byte %11111111
+  2040 2741 FF				.byte %11111111
+  2041 2742 FF				.byte %11111111
+  2042 2743 FF				.byte %11111111
+  2043 2744 FF				.byte %11111111
+  2044 2745 FF				.byte %11111111
+  2045 					; char 227
+  2046 2746 FF				.byte %11111111
+  2047 2747 FF				.byte %11111111
+  2048 2748 FF				.byte %11111111
+  2049 2749 FF				.byte %11111111
+  2050 274A FF				.byte %11111111
+  2051 274B FF				.byte %11111111
+  2052 274C FF				.byte %11111111
+  2053 274D FF				.byte %11111111
+  2054 					; char 228
+  2055 274E FF				.byte %11111111
+  2056 274F FF				.byte %11111111
+  2057 2750 FF				.byte %11111111
+  2058 2751 FF				.byte %11111111
+  2059 2752 FF				.byte %11111111
+  2060 2753 FF				.byte %11111111
+  2061 2754 FF				.byte %11111111
+  2062 2755 FF				.byte %11111111
+  2063 					; char 229
+  2064 2756 FF				.byte %11111111
+  2065 2757 FF				.byte %11111111
+  2066 2758 FF				.byte %11111111
+  2067 2759 FF				.byte %11111111
+  2068 275A FF				.byte %11111111
+  2069 275B FF				.byte %11111111
+  2070 275C FF				.byte %11111111
+  2071 275D FF				.byte %11111111
+  2072 					; char 230
+  2073 275E FF				.byte %11111111
+  2074 275F FF				.byte %11111111
+  2075 2760 FF				.byte %11111111
+  2076 2761 FF				.byte %11111111
+  2077 2762 FF				.byte %11111111
+  2078 2763 FF				.byte %11111111
+  2079 2764 FF				.byte %11111111
+  2080 2765 FF				.byte %11111111
+  2081 					; char 231
+  2082 2766 FF				.byte %11111111
+  2083 2767 FF				.byte %11111111
+  2084 2768 FF				.byte %11111111
+  2085 2769 FF				.byte %11111111
+  2086 276A FF				.byte %11111111
+  2087 276B FF				.byte %11111111
+  2088 276C FF				.byte %11111111
+  2089 276D FF				.byte %11111111
+  2090 					; char 232
+  2091 276E FF				.byte %11111111
+  2092 276F FF				.byte %11111111
+  2093 2770 FF				.byte %11111111
+  2094 2771 FF				.byte %11111111
+  2095 2772 FF				.byte %11111111
+  2096 2773 FF				.byte %11111111
+  2097 2774 FF				.byte %11111111
+  2098 2775 FF				.byte %11111111
+  2099 					; char 233
+  2100 2776 FF				.byte %11111111
+  2101 2777 FF				.byte %11111111
+  2102 2778 FF				.byte %11111111
+  2103 2779 FF				.byte %11111111
+  2104 277A FF				.byte %11111111
+  2105 277B FF				.byte %11111111
+  2106 277C FF				.byte %11111111
+  2107 277D FF				.byte %11111111
+  2108 					; char 234
+  2109 277E FF				.byte %11111111
+  2110 277F FF				.byte %11111111
+  2111 2780 FF				.byte %11111111
+  2112 2781 FF				.byte %11111111
+  2113 2782 FF				.byte %11111111
+  2114 2783 FF				.byte %11111111
+  2115 2784 FF				.byte %11111111
+  2116 2785 FF				.byte %11111111
+  2117 					; char 235
+  2118 2786 FF				.byte %11111111
+  2119 2787 FF				.byte %11111111
+  2120 2788 FF				.byte %11111111
+  2121 2789 FF				.byte %11111111
+  2122 278A FF				.byte %11111111
+  2123 278B FF				.byte %11111111
+  2124 278C FF				.byte %11111111
+  2125 278D FF				.byte %11111111
+  2126 					; char 236
+  2127 278E FF				.byte %11111111
+  2128 278F FF				.byte %11111111
+  2129 2790 FF				.byte %11111111
+  2130 2791 FF				.byte %11111111
+  2131 2792 FF				.byte %11111111
+  2132 2793 FF				.byte %11111111
+  2133 2794 FF				.byte %11111111
+  2134 2795 FF				.byte %11111111
+  2135 					; char 237
+  2136 2796 FF				.byte %11111111
+  2137 2797 FF				.byte %11111111
+  2138 2798 FF				.byte %11111111
+  2139 2799 FF				.byte %11111111
+  2140 279A FF				.byte %11111111
+  2141 279B FF				.byte %11111111
+  2142 279C FF				.byte %11111111
+  2143 279D FF				.byte %11111111
+  2144 					; char 238
+  2145 279E FF				.byte %11111111
+  2146 279F FF				.byte %11111111
+  2147 27A0 FF				.byte %11111111
+  2148 27A1 FF				.byte %11111111
+  2149 27A2 FF				.byte %11111111
+  2150 27A3 FF				.byte %11111111
+  2151 27A4 FF				.byte %11111111
+  2152 27A5 FF				.byte %11111111
+  2153 					; char 239
+  2154 27A6 FF				.byte %11111111
+  2155 27A7 FF				.byte %11111111
+  2156 27A8 FF				.byte %11111111
+  2157 27A9 FF				.byte %11111111
+  2158 27AA FF				.byte %11111111
+  2159 27AB FF				.byte %11111111
+  2160 27AC FF				.byte %11111111
+  2161 27AD FF				.byte %11111111
+  2162 					; char 240
+  2163 27AE FF				.byte %11111111
+  2164 27AF FF				.byte %11111111
+  2165 27B0 FF				.byte %11111111
+  2166 27B1 FF				.byte %11111111
+  2167 27B2 FF				.byte %11111111
+  2168 27B3 FF				.byte %11111111
+  2169 27B4 FF				.byte %11111111
+  2170 27B5 FF				.byte %11111111
+  2171 					; char 241
+  2172 27B6 FF				.byte %11111111
+  2173 27B7 FF				.byte %11111111
+  2174 27B8 FF				.byte %11111111
+  2175 27B9 FF				.byte %11111111
+  2176 27BA FF				.byte %11111111
+  2177 27BB FF				.byte %11111111
+  2178 27BC FF				.byte %11111111
+  2179 27BD FF				.byte %11111111
+  2180 					; char 242
+  2181 27BE FF				.byte %11111111
+  2182 27BF FF				.byte %11111111
+  2183 27C0 FF				.byte %11111111
+  2184 27C1 FF				.byte %11111111
+  2185 27C2 FF				.byte %11111111
+  2186 27C3 FF				.byte %11111111
+  2187 27C4 FF				.byte %11111111
+  2188 27C5 FF				.byte %11111111
+  2189 					; char 243
+  2190 27C6 FF				.byte %11111111
+  2191 27C7 FF				.byte %11111111
+  2192 27C8 FF				.byte %11111111
+  2193 27C9 FF				.byte %11111111
+  2194 27CA FF				.byte %11111111
+  2195 27CB FF				.byte %11111111
+  2196 27CC FF				.byte %11111111
+  2197 27CD FF				.byte %11111111
+  2198 					; char 244
+  2199 27CE FF				.byte %11111111
+  2200 27CF FF				.byte %11111111
+  2201 27D0 FF				.byte %11111111
+  2202 27D1 FF				.byte %11111111
+  2203 27D2 FF				.byte %11111111
+  2204 27D3 FF				.byte %11111111
+  2205 27D4 FF				.byte %11111111
+  2206 27D5 FF				.byte %11111111
+  2207 					; char 245
+  2208 27D6 FF				.byte %11111111
+  2209 27D7 FF				.byte %11111111
+  2210 27D8 FF				.byte %11111111
+  2211 27D9 FF				.byte %11111111
+  2212 27DA FF				.byte %11111111
+  2213 27DB FF				.byte %11111111
+  2214 27DC FF				.byte %11111111
+  2215 27DD FF				.byte %11111111
+  2216 					; char 246
+  2217 27DE FF				.byte %11111111
+  2218 27DF FF				.byte %11111111
+  2219 27E0 FF				.byte %11111111
+  2220 27E1 FF				.byte %11111111
+  2221 27E2 FF				.byte %11111111
+  2222 27E3 FF				.byte %11111111
+  2223 27E4 FF				.byte %11111111
+  2224 27E5 FF				.byte %11111111
+  2225 					; char 247
+  2226 27E6 FF				.byte %11111111
+  2227 27E7 FF				.byte %11111111
+  2228 27E8 FF				.byte %11111111
+  2229 27E9 FF				.byte %11111111
+  2230 27EA FF				.byte %11111111
+  2231 27EB FF				.byte %11111111
+  2232 27EC FF				.byte %11111111
+  2233 27ED FF				.byte %11111111
+  2234 					; char 248
+  2235 27EE FF				.byte %11111111
+  2236 27EF FF				.byte %11111111
+  2237 27F0 FF				.byte %11111111
+  2238 27F1 FF				.byte %11111111
+  2239 27F2 FF				.byte %11111111
+  2240 27F3 FF				.byte %11111111
+  2241 27F4 FF				.byte %11111111
+  2242 27F5 FF				.byte %11111111
+  2243 					; char 249
+  2244 27F6 FF				.byte %11111111
+  2245 27F7 FF				.byte %11111111
+  2246 27F8 FF				.byte %11111111
+  2247 27F9 FF				.byte %11111111
+  2248 27FA FF				.byte %11111111
+  2249 27FB FF				.byte %11111111
+  2250 27FC FF				.byte %11111111
+  2251 27FD FF				.byte %11111111
+  2252 					; char 250
+  2253 27FE FF				.byte %11111111
+  2254 27FF FF				.byte %11111111
+  2255 2800 FF				.byte %11111111
+  2256 2801 FF				.byte %11111111
+  2257 2802 FF				.byte %11111111
+  2258 2803 FF				.byte %11111111
+  2259 2804 FF				.byte %11111111
+  2260 2805 FF				.byte %11111111
+  2261 					; char 251
+  2262 2806 FF				.byte %11111111
+  2263 2807 FF				.byte %11111111
+  2264 2808 FF				.byte %11111111
+  2265 2809 FF				.byte %11111111
+  2266 280A FF				.byte %11111111
+  2267 280B FF				.byte %11111111
+  2268 280C FF				.byte %11111111
+  2269 280D FF				.byte %11111111
+  2270 					; char 252
+  2271 280E FF				.byte %11111111
+  2272 280F FF				.byte %11111111
+  2273 2810 FF				.byte %11111111
+  2274 2811 FF				.byte %11111111
+  2275 2812 FF				.byte %11111111
+  2276 2813 FF				.byte %11111111
+  2277 2814 FF				.byte %11111111
+  2278 2815 FF				.byte %11111111
+  2279 					; char 253
+  2280 2816 FF				.byte %11111111
+  2281 2817 FF				.byte %11111111
+  2282 2818 FF				.byte %11111111
+  2283 2819 FF				.byte %11111111
+  2284 281A FF				.byte %11111111
+  2285 281B FF				.byte %11111111
+  2286 281C FF				.byte %11111111
+  2287 281D FF				.byte %11111111
+  2288 					; char 254
+  2289 281E FF				.byte %11111111
+  2290 281F FF				.byte %11111111
+  2291 2820 FF				.byte %11111111
+  2292 2821 FF				.byte %11111111
+  2293 2822 FF				.byte %11111111
+  2294 2823 FF				.byte %11111111
+  2295 2824 FF				.byte %11111111
+  2296 2825 FF				.byte %11111111
+  2297 					; char 255
+  2298 2826 FF				.byte %11111111
+  2299 2827 FF				.byte %11111111
+  2300 2828 FF				.byte %11111111
+  2301 2829 FF				.byte %11111111
+  2302 282A FF				.byte %11111111
+  2303 282B FF				.byte %11111111
+  2304 282C FF				.byte %11111111
+  2305 282D FF				.byte %11111111
+  2306 					; char 256
+  2307 282E FF				.byte %11111111
+  2308 282F FF				.byte %11111111
+  2309 2830 FF				.byte %11111111
+  2310 2831 FF				.byte %11111111
+  2311 2832 FF				.byte %11111111
+  2312 2833 FF				.byte %11111111
+  2313 2834 FF				.byte %11111111
+  2314 2835 FF				.byte %11111111
+  2315 					; char 257
+  2316 2836 FF				.byte %11111111
+  2317 2837 FF				.byte %11111111
+  2318 2838 FF				.byte %11111111
+  2319 2839 FF				.byte %11111111
+  2320 283A FF				.byte %11111111
+  2321 283B FF				.byte %11111111
+  2322 283C FF				.byte %11111111
+  2323 283D FF				.byte %11111111
+  2324 					; char 258
+  2325 283E FF				.byte %11111111
+  2326 283F FF				.byte %11111111
+  2327 2840 FF				.byte %11111111
+  2328 2841 FF				.byte %11111111
+  2329 2842 FF				.byte %11111111
+  2330 2843 FF				.byte %11111111
+  2331 2844 FF				.byte %11111111
+  2332 2845 FF				.byte %11111111
+  2333 					; char 259
+  2334 2846 FF				.byte %11111111
+  2335 2847 FF				.byte %11111111
+  2336 2848 FF				.byte %11111111
+  2337 2849 FF				.byte %11111111
+  2338 284A FF				.byte %11111111
+  2339 284B FF				.byte %11111111
+  2340 284C FF				.byte %11111111
+  2341 284D FF				.byte %11111111
+  2342 					; char 260
+  2343 284E FF				.byte %11111111
+  2344 284F FF				.byte %11111111
+  2345 2850 FF				.byte %11111111
+  2346 2851 FF				.byte %11111111
+  2347 2852 FF				.byte %11111111
+  2348 2853 FF				.byte %11111111
+  2349 2854 FF				.byte %11111111
+  2350 2855 FF				.byte %11111111
+  2351 					; char 261
+  2352 2856 FF				.byte %11111111
+  2353 2857 FF				.byte %11111111
+  2354 2858 FF				.byte %11111111
+  2355 2859 FF				.byte %11111111
+  2356 285A FF				.byte %11111111
+  2357 285B FF				.byte %11111111
+  2358 285C FF				.byte %11111111
+  2359 285D FF				.byte %11111111
+  2360 					; char 262
+  2361 285E FF				.byte %11111111
+  2362 285F FF				.byte %11111111
+  2363 2860 FF				.byte %11111111
+  2364 2861 FF				.byte %11111111
+  2365 2862 FF				.byte %11111111
+  2366 2863 FF				.byte %11111111
+  2367 2864 FF				.byte %11111111
+  2368 2865 FF				.byte %11111111
+  2369 					; char 263
+  2370 2866 FF				.byte %11111111
+  2371 2867 FF				.byte %11111111
+  2372 2868 FF				.byte %11111111
+  2373 2869 FF				.byte %11111111
+  2374 286A FF				.byte %11111111
+  2375 286B FF				.byte %11111111
+  2376 286C FF				.byte %11111111
+  2377 286D FF				.byte %11111111
+  2378 					; char 264
+  2379 286E FF				.byte %11111111
+  2380 286F FF				.byte %11111111
+  2381 2870 FF				.byte %11111111
+  2382 2871 FF				.byte %11111111
+  2383 2872 FF				.byte %11111111
+  2384 2873 FF				.byte %11111111
+  2385 2874 FF				.byte %11111111
+  2386 2875 FF				.byte %11111111
+  2387 					; char 265
+  2388 2876 FF				.byte %11111111
+  2389 2877 FF				.byte %11111111
+  2390 2878 FF				.byte %11111111
+  2391 2879 FF				.byte %11111111
+  2392 287A FF				.byte %11111111
+  2393 287B FF				.byte %11111111
+  2394 287C FF				.byte %11111111
+  2395 287D FF				.byte %11111111
+  2396 					; char 266
+  2397 287E FF				.byte %11111111
+  2398 287F FF				.byte %11111111
+  2399 2880 FF				.byte %11111111
+  2400 2881 FF				.byte %11111111
+  2401 2882 FF				.byte %11111111
+  2402 2883 FF				.byte %11111111
+  2403 2884 FF				.byte %11111111
+  2404 2885 FF				.byte %11111111
+  2405 					; char 267
+  2406 2886 FF				.byte %11111111
+  2407 2887 FF				.byte %11111111
+  2408 2888 FF				.byte %11111111
+  2409 2889 FF				.byte %11111111
+  2410 288A FF				.byte %11111111
+  2411 288B FF				.byte %11111111
+  2412 288C FF				.byte %11111111
+  2413 288D FF				.byte %11111111
+  2414 					; char 268
+  2415 288E FF				.byte %11111111
+  2416 288F FF				.byte %11111111
+  2417 2890 FF				.byte %11111111
+  2418 2891 FF				.byte %11111111
+  2419 2892 FF				.byte %11111111
+  2420 2893 FF				.byte %11111111
+  2421 2894 FF				.byte %11111111
+  2422 2895 FF				.byte %11111111
+  2423 					; char 269
+  2424 2896 FF				.byte %11111111
+  2425 2897 FF				.byte %11111111
+  2426 2898 FF				.byte %11111111
+  2427 2899 FF				.byte %11111111
+  2428 289A FF				.byte %11111111
+  2429 289B FF				.byte %11111111
+  2430 289C FF				.byte %11111111
+  2431 289D FF				.byte %11111111
+  2432 					; char 270
+  2433 289E FF				.byte %11111111
+  2434 289F FF				.byte %11111111
+  2435 28A0 FF				.byte %11111111
+  2436 28A1 FF				.byte %11111111
+  2437 28A2 FF				.byte %11111111
+  2438 28A3 FF				.byte %11111111
+  2439 28A4 FF				.byte %11111111
+  2440 28A5 FF				.byte %11111111
+  2441 					; char 271
+  2442 28A6 FF				.byte %11111111
+  2443 28A7 FF				.byte %11111111
+  2444 28A8 FF				.byte %11111111
+  2445 28A9 FF				.byte %11111111
+  2446 28AA FF				.byte %11111111
+  2447 28AB FF				.byte %11111111
+  2448 28AC FF				.byte %11111111
+  2449 28AD FF				.byte %11111111
+  2450 					; char 272
+  2451 28AE FF				.byte %11111111
+  2452 28AF FF				.byte %11111111
+  2453 28B0 FF				.byte %11111111
+  2454 28B1 FF				.byte %11111111
+  2455 28B2 FF				.byte %11111111
+  2456 28B3 FF				.byte %11111111
+  2457 28B4 FF				.byte %11111111
+  2458 28B5 FF				.byte %11111111
+  2459 					; char 273
+  2460 28B6 FF				.byte %11111111
+  2461 28B7 FF				.byte %11111111
+  2462 28B8 FF				.byte %11111111
+  2463 28B9 FF				.byte %11111111
+  2464 28BA FF				.byte %11111111
+  2465 28BB FF				.byte %11111111
+  2466 28BC FF				.byte %11111111
+  2467 28BD FF				.byte %11111111
+  2468 					; char 274
+  2469 28BE FF				.byte %11111111
+  2470 28BF FF				.byte %11111111
+  2471 28C0 FF				.byte %11111111
+  2472 28C1 FF				.byte %11111111
+  2473 28C2 FF				.byte %11111111
+  2474 28C3 FF				.byte %11111111
+  2475 28C4 FF				.byte %11111111
+  2476 28C5 FF				.byte %11111111
+  2477 					; char 275
+  2478 28C6 FF				.byte %11111111
+  2479 28C7 FF				.byte %11111111
+  2480 28C8 FF				.byte %11111111
+  2481 28C9 FF				.byte %11111111
+  2482 28CA FF				.byte %11111111
+  2483 28CB FF				.byte %11111111
+  2484 28CC FF				.byte %11111111
+  2485 28CD FF				.byte %11111111
+  2486 					; char 276
+  2487 28CE FF				.byte %11111111
+  2488 28CF FF				.byte %11111111
+  2489 28D0 FF				.byte %11111111
+  2490 28D1 FF				.byte %11111111
+  2491 28D2 FF				.byte %11111111
+  2492 28D3 FF				.byte %11111111
+  2493 28D4 FF				.byte %11111111
+  2494 28D5 FF				.byte %11111111
+  2495 					; char 277
+  2496 28D6 FF				.byte %11111111
+  2497 28D7 FF				.byte %11111111
+  2498 28D8 FF				.byte %11111111
+  2499 28D9 FF				.byte %11111111
+  2500 28DA FF				.byte %11111111
+  2501 28DB FF				.byte %11111111
+  2502 28DC FF				.byte %11111111
+  2503 28DD FF				.byte %11111111
+  2504 					; char 278
+  2505 28DE FF				.byte %11111111
+  2506 28DF FF				.byte %11111111
+  2507 28E0 FF				.byte %11111111
+  2508 28E1 FF				.byte %11111111
+  2509 28E2 FF				.byte %11111111
+  2510 28E3 FF				.byte %11111111
+  2511 28E4 FF				.byte %11111111
+  2512 28E5 FF				.byte %11111111
+  2513 					; char 279
+  2514 28E6 FF				.byte %11111111
+  2515 28E7 FF				.byte %11111111
+  2516 28E8 FF				.byte %11111111
+  2517 28E9 FF				.byte %11111111
+  2518 28EA FF				.byte %11111111
+  2519 28EB FF				.byte %11111111
+  2520 28EC FF				.byte %11111111
+  2521 28ED FF				.byte %11111111
+  2522 					; char 280
+  2523 28EE FF				.byte %11111111
+  2524 28EF FF				.byte %11111111
+  2525 28F0 FF				.byte %11111111
+  2526 28F1 FF				.byte %11111111
+  2527 28F2 FF				.byte %11111111
+  2528 28F3 FF				.byte %11111111
+  2529 28F4 FF				.byte %11111111
+  2530 28F5 FF				.byte %11111111
+  2531 					; char 281
+  2532 28F6 FF				.byte %11111111
+  2533 28F7 FF				.byte %11111111
+  2534 28F8 FF				.byte %11111111
+  2535 28F9 FF				.byte %11111111
+  2536 28FA FF				.byte %11111111
+  2537 28FB FF				.byte %11111111
+  2538 28FC FF				.byte %11111111
+  2539 28FD FF				.byte %11111111
+  2540 					; char 282
+  2541 28FE FF				.byte %11111111
+  2542 28FF FF				.byte %11111111
+  2543 2900 FF				.byte %11111111
+  2544 2901 FF				.byte %11111111
+  2545 2902 FF				.byte %11111111
+  2546 2903 FF				.byte %11111111
+  2547 2904 FF				.byte %11111111
+  2548 2905 FF				.byte %11111111
+  2549 					; char 283
+  2550 2906 FF				.byte %11111111
+  2551 2907 FF				.byte %11111111
+  2552 2908 FF				.byte %11111111
+  2553 2909 FF				.byte %11111111
+  2554 290A FF				.byte %11111111
+  2555 290B FF				.byte %11111111
+  2556 290C FF				.byte %11111111
+  2557 290D FF				.byte %11111111
+  2558 					; char 284
+  2559 290E FF				.byte %11111111
+  2560 290F FF				.byte %11111111
+  2561 2910 FF				.byte %11111111
+  2562 2911 FF				.byte %11111111
+  2563 2912 FF				.byte %11111111
+  2564 2913 FF				.byte %11111111
+  2565 2914 FF				.byte %11111111
+  2566 2915 FF				.byte %11111111
+  2567 					; char 285
+  2568 2916 FF				.byte %11111111
+  2569 2917 FF				.byte %11111111
+  2570 2918 FF				.byte %11111111
+  2571 2919 FF				.byte %11111111
+  2572 291A FF				.byte %11111111
+  2573 291B FF				.byte %11111111
+  2574 291C FF				.byte %11111111
+  2575 291D FF				.byte %11111111
+  2576 					; char 286
+  2577 291E FF				.byte %11111111
+  2578 291F FF				.byte %11111111
+  2579 2920 FF				.byte %11111111
+  2580 2921 FF				.byte %11111111
+  2581 2922 FF				.byte %11111111
+  2582 2923 FF				.byte %11111111
+  2583 2924 FF				.byte %11111111
+  2584 2925 FF				.byte %11111111
+  2585 					; char 287
+  2586 2926 FF				.byte %11111111
+  2587 2927 FF				.byte %11111111
+  2588 2928 FF				.byte %11111111
+  2589 2929 FF				.byte %11111111
+  2590 292A FF				.byte %11111111
+  2591 292B FF				.byte %11111111
+  2592 292C FF				.byte %11111111
+  2593 292D FF				.byte %11111111
+  2594 					; char 288
+  2595 292E FF				.byte %11111111
+  2596 292F FF				.byte %11111111
+  2597 2930 FF				.byte %11111111
+  2598 2931 FF				.byte %11111111
+  2599 2932 FF				.byte %11111111
+  2600 2933 FF				.byte %11111111
+  2601 2934 FF				.byte %11111111
+  2602 2935 FF				.byte %11111111
+  2603 					; char 289
+  2604 2936 FF				.byte %11111111
+  2605 2937 FF				.byte %11111111
+  2606 2938 FF				.byte %11111111
+  2607 2939 FF				.byte %11111111
+  2608 293A FF				.byte %11111111
+  2609 293B FF				.byte %11111111
+  2610 293C FF				.byte %11111111
+  2611 293D FF				.byte %11111111
+  2612 					; char 290
+  2613 293E FF				.byte %11111111
+  2614 293F FF				.byte %11111111
+  2615 2940 FF				.byte %11111111
+  2616 2941 FF				.byte %11111111
+  2617 2942 FF				.byte %11111111
+  2618 2943 FF				.byte %11111111
+  2619 2944 FF				.byte %11111111
+  2620 2945 FF				.byte %11111111
+  2621 					; char 291
+  2622 2946 FF				.byte %11111111
+  2623 2947 FF				.byte %11111111
+  2624 2948 FF				.byte %11111111
+  2625 2949 FF				.byte %11111111
+  2626 294A FF				.byte %11111111
+  2627 294B FF				.byte %11111111
+  2628 294C FF				.byte %11111111
+  2629 294D FF				.byte %11111111
+  2630 					; char 292
+  2631 294E FF				.byte %11111111
+  2632 294F FF				.byte %11111111
+  2633 2950 FF				.byte %11111111
+  2634 2951 FF				.byte %11111111
+  2635 2952 FF				.byte %11111111
+  2636 2953 FF				.byte %11111111
+  2637 2954 FF				.byte %11111111
+  2638 2955 FF				.byte %11111111
+  2639 					; char 293
+  2640 2956 FF				.byte %11111111
+  2641 2957 FF				.byte %11111111
+  2642 2958 FF				.byte %11111111
+  2643 2959 FF				.byte %11111111
+  2644 295A FF				.byte %11111111
+  2645 295B FF				.byte %11111111
+  2646 295C FF				.byte %11111111
+  2647 295D FF				.byte %11111111
+  2648 					; char 294
+  2649 295E FF				.byte %11111111
+  2650 295F FF				.byte %11111111
+  2651 2960 FF				.byte %11111111
+  2652 2961 FF				.byte %11111111
+  2653 2962 FF				.byte %11111111
+  2654 2963 FF				.byte %11111111
+  2655 2964 FF				.byte %11111111
+  2656 2965 FF				.byte %11111111
+  2657 					; char 295
+  2658 2966 FF				.byte %11111111
+  2659 2967 FF				.byte %11111111
+  2660 2968 FF				.byte %11111111
+  2661 2969 FF				.byte %11111111
+  2662 296A FF				.byte %11111111
+  2663 296B FF				.byte %11111111
+  2664 296C FF				.byte %11111111
+  2665 296D FF				.byte %11111111
+  2666 					; char 296
+  2667 296E FF				.byte %11111111
+  2668 296F FF				.byte %11111111
+  2669 2970 FF				.byte %11111111
+  2670 2971 FF				.byte %11111111
+  2671 2972 FF				.byte %11111111
+  2672 2973 FF				.byte %11111111
+  2673 2974 FF				.byte %11111111
+  2674 2975 FF				.byte %11111111
+  2675 					; char 297
+  2676 2976 FF				.byte %11111111
+  2677 2977 FF				.byte %11111111
+  2678 2978 FF				.byte %11111111
+  2679 2979 FF				.byte %11111111
+  2680 297A FF				.byte %11111111
+  2681 297B FF				.byte %11111111
+  2682 297C FF				.byte %11111111
+  2683 297D FF				.byte %11111111
+  2684 					; char 298
+  2685 297E FF				.byte %11111111
+  2686 297F FF				.byte %11111111
+  2687 2980 FF				.byte %11111111
+  2688 2981 FF				.byte %11111111
+  2689 2982 FF				.byte %11111111
+  2690 2983 FF				.byte %11111111
+  2691 2984 FF				.byte %11111111
+  2692 2985 FF				.byte %11111111
+  2693 					; char 299
+  2694 2986 FF				.byte %11111111
+  2695 2987 FF				.byte %11111111
+  2696 2988 FF				.byte %11111111
+  2697 2989 FF				.byte %11111111
+  2698 298A FF				.byte %11111111
+  2699 298B FF				.byte %11111111
+  2700 298C FF				.byte %11111111
+  2701 298D FF				.byte %11111111
+  2702 					; char 300
+  2703 298E FF				.byte %11111111
+  2704 298F FF				.byte %11111111
+  2705 2990 FF				.byte %11111111
+  2706 2991 FF				.byte %11111111
+  2707 2992 FF				.byte %11111111
+  2708 2993 FF				.byte %11111111
+  2709 2994 FF				.byte %11111111
+  2710 2995 FF				.byte %11111111
+  2711 					; char 301
+  2712 2996 FF				.byte %11111111
+  2713 2997 FF				.byte %11111111
+  2714 2998 FF				.byte %11111111
+  2715 2999 FF				.byte %11111111
+  2716 299A FF				.byte %11111111
+  2717 299B FF				.byte %11111111
+  2718 299C FF				.byte %11111111
+  2719 299D FF				.byte %11111111
+  2720 					; char 302
+  2721 299E FF				.byte %11111111
+  2722 299F FF				.byte %11111111
+  2723 29A0 FF				.byte %11111111
+  2724 29A1 FF				.byte %11111111
+  2725 29A2 FF				.byte %11111111
+  2726 29A3 FF				.byte %11111111
+  2727 29A4 FF				.byte %11111111
+  2728 29A5 FF				.byte %11111111
+  2729 					; char 303
+  2730 29A6 FF				.byte %11111111
+  2731 29A7 FF				.byte %11111111
+  2732 29A8 FF				.byte %11111111
+  2733 29A9 FF				.byte %11111111
+  2734 29AA FF				.byte %11111111
+  2735 29AB FF				.byte %11111111
+  2736 29AC FF				.byte %11111111
+  2737 29AD FF				.byte %11111111
+  2738 					; char 304
+  2739 29AE FF				.byte %11111111
+  2740 29AF FF				.byte %11111111
+  2741 29B0 FF				.byte %11111111
+  2742 29B1 FF				.byte %11111111
+  2743 29B2 FF				.byte %11111111
+  2744 29B3 FF				.byte %11111111
+  2745 29B4 FF				.byte %11111111
+  2746 29B5 FF				.byte %11111111
+  2747 					; char 305
+  2748 29B6 FF				.byte %11111111
+  2749 29B7 FF				.byte %11111111
+  2750 29B8 FF				.byte %11111111
+  2751 29B9 FF				.byte %11111111
+  2752 29BA FF				.byte %11111111
+  2753 29BB FF				.byte %11111111
+  2754 29BC FF				.byte %11111111
+  2755 29BD FF				.byte %11111111
+  2756 					; char 306
+  2757 29BE FF				.byte %11111111
+  2758 29BF FF				.byte %11111111
+  2759 29C0 FF				.byte %11111111
+  2760 29C1 FF				.byte %11111111
+  2761 29C2 FF				.byte %11111111
+  2762 29C3 FF				.byte %11111111
+  2763 29C4 FF				.byte %11111111
+  2764 29C5 FF				.byte %11111111
+  2765 					; char 307
+  2766 29C6 FF				.byte %11111111
+  2767 29C7 FF				.byte %11111111
+  2768 29C8 FF				.byte %11111111
+  2769 29C9 FF				.byte %11111111
+  2770 29CA FF				.byte %11111111
+  2771 29CB FF				.byte %11111111
+  2772 29CC FF				.byte %11111111
+  2773 29CD FF				.byte %11111111
+  2774 					; char 308
+  2775 29CE FF				.byte %11111111
+  2776 29CF FF				.byte %11111111
+  2777 29D0 FF				.byte %11111111
+  2778 29D1 FF				.byte %11111111
+  2779 29D2 FF				.byte %11111111
+  2780 29D3 FF				.byte %11111111
+  2781 29D4 FF				.byte %11111111
+  2782 29D5 FF				.byte %11111111
+  2783 					; char 309
+  2784 29D6 FF				.byte %11111111
+  2785 29D7 FF				.byte %11111111
+  2786 29D8 FF				.byte %11111111
+  2787 29D9 FF				.byte %11111111
+  2788 29DA FF				.byte %11111111
+  2789 29DB FF				.byte %11111111
+  2790 29DC FF				.byte %11111111
+  2791 29DD FF				.byte %11111111
+  2792 					; char 310
+  2793 29DE FF				.byte %11111111
+  2794 29DF FF				.byte %11111111
+  2795 29E0 FF				.byte %11111111
+  2796 29E1 FF				.byte %11111111
+  2797 29E2 FF				.byte %11111111
+  2798 29E3 FF				.byte %11111111
+  2799 29E4 FF				.byte %11111111
+  2800 29E5 FF				.byte %11111111
+  2801 					; char 311
+  2802 29E6 FF				.byte %11111111
+  2803 29E7 FF				.byte %11111111
+  2804 29E8 FF				.byte %11111111
+  2805 29E9 FF				.byte %11111111
+  2806 29EA FF				.byte %11111111
+  2807 29EB FF				.byte %11111111
+  2808 29EC FF				.byte %11111111
+  2809 29ED FF				.byte %11111111
+  2810 					; char 312
+  2811 29EE FF				.byte %11111111
+  2812 29EF FF				.byte %11111111
+  2813 29F0 FF				.byte %11111111
+  2814 29F1 FF				.byte %11111111
+  2815 29F2 FF				.byte %11111111
+  2816 29F3 FF				.byte %11111111
+  2817 29F4 FF				.byte %11111111
+  2818 29F5 FF				.byte %11111111
+  2819 					; char 313
+  2820 29F6 FF				.byte %11111111
+  2821 29F7 FF				.byte %11111111
+  2822 29F8 FF				.byte %11111111
+  2823 29F9 FF				.byte %11111111
+  2824 29FA FF				.byte %11111111
+  2825 29FB FF				.byte %11111111
+  2826 29FC FF				.byte %11111111
+  2827 29FD FF				.byte %11111111
+  2828 					; char 314
+  2829 29FE FF				.byte %11111111
+  2830 29FF FF				.byte %11111111
+  2831 2A00 FF				.byte %11111111
+  2832 2A01 FF				.byte %11111111
+  2833 2A02 FF				.byte %11111111
+  2834 2A03 FF				.byte %11111111
+  2835 2A04 FF				.byte %11111111
+  2836 2A05 FF				.byte %11111111
+  2837 					; char 315
+  2838 2A06 FF				.byte %11111111
+  2839 2A07 FF				.byte %11111111
+  2840 2A08 FF				.byte %11111111
+  2841 2A09 FF				.byte %11111111
+  2842 2A0A FF				.byte %11111111
+  2843 2A0B FF				.byte %11111111
+  2844 2A0C FF				.byte %11111111
+  2845 2A0D FF				.byte %11111111
+  2846 					; char 316
+  2847 2A0E FF				.byte %11111111
+  2848 2A0F FF				.byte %11111111
+  2849 2A10 FF				.byte %11111111
+  2850 2A11 FF				.byte %11111111
+  2851 2A12 FF				.byte %11111111
+  2852 2A13 FF				.byte %11111111
+  2853 2A14 FF				.byte %11111111
+  2854 2A15 FF				.byte %11111111
+  2855 					; char 317
+  2856 2A16 FF				.byte %11111111
+  2857 2A17 FF				.byte %11111111
+  2858 2A18 FF				.byte %11111111
+  2859 2A19 FF				.byte %11111111
+  2860 2A1A FF				.byte %11111111
+  2861 2A1B FF				.byte %11111111
+  2862 2A1C FF				.byte %11111111
+  2863 2A1D FF				.byte %11111111
+  2864 					; char 318
+  2865 2A1E FF				.byte %11111111
+  2866 2A1F FF				.byte %11111111
+  2867 2A20 FF				.byte %11111111
+  2868 2A21 FF				.byte %11111111
+  2869 2A22 FF				.byte %11111111
+  2870 2A23 FF				.byte %11111111
+  2871 2A24 FF				.byte %11111111
+  2872 2A25 FF				.byte %11111111
+  2873 					; char 319
+  2874 2A26 FF				.byte %11111111
+  2875 2A27 FF				.byte %11111111
+  2876 2A28 FF				.byte %11111111
+  2877 2A29 FF				.byte %11111111
+  2878 2A2A FF				.byte %11111111
+  2879 2A2B FF				.byte %11111111
+  2880 2A2C FF				.byte %11111111
+  2881 2A2D FF				.byte %11111111
+  2882 					; char 320
+  2883 2A2E FF				.byte %11111111
+  2884 2A2F FF				.byte %11111111
+  2885 2A30 FF				.byte %11111111
+  2886 2A31 FF				.byte %11111111
+  2887 2A32 FF				.byte %11111111
+  2888 2A33 FF				.byte %11111111
+  2889 2A34 FF				.byte %11111111
+  2890 2A35 FF				.byte %11111111
+  2891 					; char 321
+  2892 2A36 FF				.byte %11111111
+  2893 2A37 FF				.byte %11111111
+  2894 2A38 FF				.byte %11111111
+  2895 2A39 FF				.byte %11111111
+  2896 2A3A FF				.byte %11111111
+  2897 2A3B FF				.byte %11111111
+  2898 2A3C FF				.byte %11111111
+  2899 2A3D FF				.byte %11111111
+  2900 					; char 322
+  2901 2A3E FF				.byte %11111111
+  2902 2A3F FF				.byte %11111111
+  2903 2A40 FF				.byte %11111111
+  2904 2A41 FF				.byte %11111111
+  2905 2A42 FF				.byte %11111111
+  2906 2A43 FF				.byte %11111111
+  2907 2A44 FF				.byte %11111111
+  2908 2A45 FF				.byte %11111111
+  2909 					; char 323
+  2910 2A46 FF				.byte %11111111
+  2911 2A47 FF				.byte %11111111
+  2912 2A48 FF				.byte %11111111
+  2913 2A49 FF				.byte %11111111
+  2914 2A4A FF				.byte %11111111
+  2915 2A4B FF				.byte %11111111
+  2916 2A4C FF				.byte %11111111
+  2917 2A4D FF				.byte %11111111
+  2918 					; char 324
+  2919 2A4E FF				.byte %11111111
+  2920 2A4F FF				.byte %11111111
+  2921 2A50 FF				.byte %11111111
+  2922 2A51 FF				.byte %11111111
+  2923 2A52 FF				.byte %11111111
+  2924 2A53 FF				.byte %11111111
+  2925 2A54 FF				.byte %11111111
+  2926 2A55 FF				.byte %11111111
+  2927 					; char 325
+  2928 2A56 FF				.byte %11111111
+  2929 2A57 FF				.byte %11111111
+  2930 2A58 FF				.byte %11111111
+  2931 2A59 FF				.byte %11111111
+  2932 2A5A FF				.byte %11111111
+  2933 2A5B FF				.byte %11111111
+  2934 2A5C FF				.byte %11111111
+  2935 2A5D FF				.byte %11111111
+  2936 					; char 326
+  2937 2A5E FF				.byte %11111111
+  2938 2A5F FF				.byte %11111111
+  2939 2A60 FF				.byte %11111111
+  2940 2A61 FF				.byte %11111111
+  2941 2A62 FF				.byte %11111111
+  2942 2A63 FF				.byte %11111111
+  2943 2A64 FF				.byte %11111111
+  2944 2A65 FF				.byte %11111111
+  2945 					; char 327
+  2946 2A66 FF				.byte %11111111
+  2947 2A67 FF				.byte %11111111
+  2948 2A68 FF				.byte %11111111
+  2949 2A69 FF				.byte %11111111
+  2950 2A6A FF				.byte %11111111
+  2951 2A6B FF				.byte %11111111
+  2952 2A6C FF				.byte %11111111
+  2953 2A6D FF				.byte %11111111
+  2954 					; char 328
+  2955 2A6E FF				.byte %11111111
+  2956 2A6F FF				.byte %11111111
+  2957 2A70 FF				.byte %11111111
+  2958 2A71 FF				.byte %11111111
+  2959 2A72 FF				.byte %11111111
+  2960 2A73 FF				.byte %11111111
+  2961 2A74 FF				.byte %11111111
+  2962 2A75 FF				.byte %11111111
+  2963 					; char 329
+  2964 2A76 FF				.byte %11111111
+  2965 2A77 FF				.byte %11111111
+  2966 2A78 FF				.byte %11111111
+  2967 2A79 FF				.byte %11111111
+  2968 2A7A FF				.byte %11111111
+  2969 2A7B FF				.byte %11111111
+  2970 2A7C FF				.byte %11111111
+  2971 2A7D FF				.byte %11111111
+  2972 					; char 330
+  2973 2A7E FF				.byte %11111111
+  2974 2A7F FF				.byte %11111111
+  2975 2A80 FF				.byte %11111111
+  2976 2A81 FF				.byte %11111111
+  2977 2A82 FF				.byte %11111111
+  2978 2A83 FF				.byte %11111111
+  2979 2A84 FF				.byte %11111111
+  2980 2A85 FF				.byte %11111111
+  2981 					; char 331
+  2982 2A86 FF				.byte %11111111
+  2983 2A87 FF				.byte %11111111
+  2984 2A88 FF				.byte %11111111
+  2985 2A89 FF				.byte %11111111
+  2986 2A8A FF				.byte %11111111
+  2987 2A8B FF				.byte %11111111
+  2988 2A8C FF				.byte %11111111
+  2989 2A8D FF				.byte %11111111
+  2990 					; char 332
+  2991 2A8E FF				.byte %11111111
+  2992 2A8F FF				.byte %11111111
+  2993 2A90 FF				.byte %11111111
+  2994 2A91 FF				.byte %11111111
+  2995 2A92 FF				.byte %11111111
+  2996 2A93 FF				.byte %11111111
+  2997 2A94 FF				.byte %11111111
+  2998 2A95 FF				.byte %11111111
+  2999 					; char 333
+  3000 2A96 FF				.byte %11111111
+  3001 2A97 FF				.byte %11111111
+  3002 2A98 FF				.byte %11111111
+  3003 2A99 FF				.byte %11111111
+  3004 2A9A FF				.byte %11111111
+  3005 2A9B FF				.byte %11111111
+  3006 2A9C FF				.byte %11111111
+  3007 2A9D FF				.byte %11111111
+  3008 					; char 334
+  3009 2A9E FF				.byte %11111111
+  3010 2A9F FF				.byte %11111111
+  3011 2AA0 FF				.byte %11111111
+  3012 2AA1 FF				.byte %11111111
+  3013 2AA2 FF				.byte %11111111
+  3014 2AA3 FF				.byte %11111111
+  3015 2AA4 FF				.byte %11111111
+  3016 2AA5 FF				.byte %11111111
+  3017 					; char 335
+  3018 2AA6 FF				.byte %11111111
+  3019 2AA7 FF				.byte %11111111
+  3020 2AA8 FF				.byte %11111111
+  3021 2AA9 FF				.byte %11111111
+  3022 2AAA FF				.byte %11111111
+  3023 2AAB FF				.byte %11111111
+  3024 2AAC FF				.byte %11111111
+  3025 2AAD FF				.byte %11111111
+  3026 					; char 336
+  3027 2AAE FF				.byte %11111111
+  3028 2AAF FF				.byte %11111111
+  3029 2AB0 FF				.byte %11111111
+  3030 2AB1 FF				.byte %11111111
+  3031 2AB2 FF				.byte %11111111
+  3032 2AB3 FF				.byte %11111111
+  3033 2AB4 FF				.byte %11111111
+  3034 2AB5 FF				.byte %11111111
+  3035 					; char 337
+  3036 2AB6 FF				.byte %11111111
+  3037 2AB7 FF				.byte %11111111
+  3038 2AB8 FF				.byte %11111111
+  3039 2AB9 FF				.byte %11111111
+  3040 2ABA FF				.byte %11111111
+  3041 2ABB FF				.byte %11111111
+  3042 2ABC FF				.byte %11111111
+  3043 2ABD FF				.byte %11111111
+  3044 					; char 338
+  3045 2ABE FF				.byte %11111111
+  3046 2ABF FF				.byte %11111111
+  3047 2AC0 FF				.byte %11111111
+  3048 2AC1 FF				.byte %11111111
+  3049 2AC2 FF				.byte %11111111
+  3050 2AC3 FF				.byte %11111111
+  3051 2AC4 FF				.byte %11111111
+  3052 2AC5 FF				.byte %11111111
+  3053 					; char 339
+  3054 2AC6 FF				.byte %11111111
+  3055 2AC7 FF				.byte %11111111
+  3056 2AC8 FF				.byte %11111111
+  3057 2AC9 FF				.byte %11111111
+  3058 2ACA FF				.byte %11111111
+  3059 2ACB FF				.byte %11111111
+  3060 2ACC FF				.byte %11111111
+  3061 2ACD FF				.byte %11111111
+  3062 					; char 340
+  3063 2ACE FF				.byte %11111111
+  3064 2ACF FF				.byte %11111111
+  3065 2AD0 FF				.byte %11111111
+  3066 2AD1 FF				.byte %11111111
+  3067 2AD2 FF				.byte %11111111
+  3068 2AD3 FF				.byte %11111111
+  3069 2AD4 FF				.byte %11111111
+  3070 2AD5 FF				.byte %11111111
+  3071 					; char 341
+  3072 2AD6 FF				.byte %11111111
+  3073 2AD7 FF				.byte %11111111
+  3074 2AD8 FF				.byte %11111111
+  3075 2AD9 FF				.byte %11111111
+  3076 2ADA FF				.byte %11111111
+  3077 2ADB FF				.byte %11111111
+  3078 2ADC FF				.byte %11111111
+  3079 2ADD FF				.byte %11111111
+  3080 					; char 342
+  3081 2ADE FF				.byte %11111111
+  3082 2ADF FF				.byte %11111111
+  3083 2AE0 FF				.byte %11111111
+  3084 2AE1 FF				.byte %11111111
+  3085 2AE2 FF				.byte %11111111
+  3086 2AE3 FF				.byte %11111111
+  3087 2AE4 FF				.byte %11111111
+  3088 2AE5 FF				.byte %11111111
+  3089 					; char 343
+  3090 2AE6 FF				.byte %11111111
+  3091 2AE7 FF				.byte %11111111
+  3092 2AE8 FF				.byte %11111111
+  3093 2AE9 FF				.byte %11111111
+  3094 2AEA FF				.byte %11111111
+  3095 2AEB FF				.byte %11111111
+  3096 2AEC FF				.byte %11111111
+  3097 2AED FF				.byte %11111111
+  3098 					; char 344
+  3099 2AEE FF				.byte %11111111
+  3100 2AEF FF				.byte %11111111
+  3101 2AF0 FF				.byte %11111111
+  3102 2AF1 FF				.byte %11111111
+  3103 2AF2 FF				.byte %11111111
+  3104 2AF3 FF				.byte %11111111
+  3105 2AF4 FF				.byte %11111111
+  3106 2AF5 FF				.byte %11111111
+  3107 					; char 345
+  3108 2AF6 FF				.byte %11111111
+  3109 2AF7 FF				.byte %11111111
+  3110 2AF8 FF				.byte %11111111
+  3111 2AF9 FF				.byte %11111111
+  3112 2AFA FF				.byte %11111111
+  3113 2AFB FF				.byte %11111111
+  3114 2AFC FF				.byte %11111111
+  3115 2AFD FF				.byte %11111111
+  3116 					; char 346
+  3117 2AFE FF				.byte %11111111
+  3118 2AFF FF				.byte %11111111
+  3119 2B00 FF				.byte %11111111
+  3120 2B01 FF				.byte %11111111
+  3121 2B02 FF				.byte %11111111
+  3122 2B03 FF				.byte %11111111
+  3123 2B04 FF				.byte %11111111
+  3124 2B05 FF				.byte %11111111
+  3125 					; char 347
+  3126 2B06 FF				.byte %11111111
+  3127 2B07 FF				.byte %11111111
+  3128 2B08 FF				.byte %11111111
+  3129 2B09 FF				.byte %11111111
+  3130 2B0A FF				.byte %11111111
+  3131 2B0B FF				.byte %11111111
+  3132 2B0C FF				.byte %11111111
+  3133 2B0D FF				.byte %11111111
+  3134 					; char 348
+  3135 2B0E FF				.byte %11111111
+  3136 2B0F FF				.byte %11111111
+  3137 2B10 FF				.byte %11111111
+  3138 2B11 FF				.byte %11111111
+  3139 2B12 FF				.byte %11111111
+  3140 2B13 FF				.byte %11111111
+  3141 2B14 FF				.byte %11111111
+  3142 2B15 FF				.byte %11111111
+  3143 					; char 349
+  3144 2B16 FF				.byte %11111111
+  3145 2B17 FF				.byte %11111111
+  3146 2B18 FF				.byte %11111111
+  3147 2B19 FF				.byte %11111111
+  3148 2B1A FF				.byte %11111111
+  3149 2B1B FF				.byte %11111111
+  3150 2B1C FF				.byte %11111111
+  3151 2B1D FF				.byte %11111111
+  3152 					; char 350
+  3153 2B1E FF				.byte %11111111
+  3154 2B1F FF				.byte %11111111
+  3155 2B20 FF				.byte %11111111
+  3156 2B21 FF				.byte %11111111
+  3157 2B22 FF				.byte %11111111
+  3158 2B23 FF				.byte %11111111
+  3159 2B24 FF				.byte %11111111
+  3160 2B25 FF				.byte %11111111
+  3161 					; char 351
+  3162 2B26 FF				.byte %11111111
+  3163 2B27 FF				.byte %11111111
+  3164 2B28 FF				.byte %11111111
+  3165 2B29 FF				.byte %11111111
+  3166 2B2A FF				.byte %11111111
+  3167 2B2B FF				.byte %11111111
+  3168 2B2C FF				.byte %11111111
+  3169 2B2D FF				.byte %11111111
+  3170 					; char 352
+  3171 2B2E FF				.byte %11111111
+  3172 2B2F FF				.byte %11111111
+  3173 2B30 FF				.byte %11111111
+  3174 2B31 FF				.byte %11111111
+  3175 2B32 FF				.byte %11111111
+  3176 2B33 FF				.byte %11111111
+  3177 2B34 FF				.byte %11111111
+  3178 2B35 FF				.byte %11111111
+  3179 					; char 353
+  3180 2B36 FF				.byte %11111111
+  3181 2B37 FF				.byte %11111111
+  3182 2B38 FF				.byte %11111111
+  3183 2B39 FF				.byte %11111111
+  3184 2B3A FF				.byte %11111111
+  3185 2B3B FF				.byte %11111111
+  3186 2B3C FF				.byte %11111111
+  3187 2B3D FF				.byte %11111111
+  3188 					; char 354
+  3189 2B3E FF				.byte %11111111
+  3190 2B3F FF				.byte %11111111
+  3191 2B40 FF				.byte %11111111
+  3192 2B41 FF				.byte %11111111
+  3193 2B42 FF				.byte %11111111
+  3194 2B43 FF				.byte %11111111
+  3195 2B44 FF				.byte %11111111
+  3196 2B45 FF				.byte %11111111
+  3197 					; char 355
+  3198 2B46 FF				.byte %11111111
+  3199 2B47 FF				.byte %11111111
+  3200 2B48 FF				.byte %11111111
+  3201 2B49 FF				.byte %11111111
+  3202 2B4A FF				.byte %11111111
+  3203 2B4B FF				.byte %11111111
+  3204 2B4C FF				.byte %11111111
+  3205 2B4D FF				.byte %11111111
+  3206 					; char 356
+  3207 2B4E FF				.byte %11111111
+  3208 2B4F FF				.byte %11111111
+  3209 2B50 FF				.byte %11111111
+  3210 2B51 FF				.byte %11111111
+  3211 2B52 FF				.byte %11111111
+  3212 2B53 FF				.byte %11111111
+  3213 2B54 FF				.byte %11111111
+  3214 2B55 FF				.byte %11111111
+  3215 					; char 357
+  3216 2B56 FF				.byte %11111111
+  3217 2B57 FF				.byte %11111111
+  3218 2B58 FF				.byte %11111111
+  3219 2B59 FF				.byte %11111111
+  3220 2B5A FF				.byte %11111111
+  3221 2B5B FF				.byte %11111111
+  3222 2B5C FF				.byte %11111111
+  3223 2B5D FF				.byte %11111111
+  3224 					; char 358
+  3225 2B5E FF				.byte %11111111
+  3226 2B5F FF				.byte %11111111
+  3227 2B60 FF				.byte %11111111
+  3228 2B61 FF				.byte %11111111
+  3229 2B62 FF				.byte %11111111
+  3230 2B63 FF				.byte %11111111
+  3231 2B64 FF				.byte %11111111
+  3232 2B65 FF				.byte %11111111
+  3233 					; char 359
+  3234 2B66 FF				.byte %11111111
+  3235 2B67 FF				.byte %11111111
+  3236 2B68 FF				.byte %11111111
+  3237 2B69 FF				.byte %11111111
+  3238 2B6A FF				.byte %11111111
+  3239 2B6B FF				.byte %11111111
+  3240 2B6C FF				.byte %11111111
+  3241 2B6D FF				.byte %11111111
+  3242 					; char 360
+  3243 2B6E FF				.byte %11111111
+  3244 2B6F FF				.byte %11111111
+  3245 2B70 FF				.byte %11111111
+  3246 2B71 FF				.byte %11111111
+  3247 2B72 FF				.byte %11111111
+  3248 2B73 FF				.byte %11111111
+  3249 2B74 FF				.byte %11111111
+  3250 2B75 FF				.byte %11111111
+  3251 					; char 361
+  3252 2B76 FF				.byte %11111111
+  3253 2B77 FF				.byte %11111111
+  3254 2B78 FF				.byte %11111111
+  3255 2B79 FF				.byte %11111111
+  3256 2B7A FF				.byte %11111111
+  3257 2B7B FF				.byte %11111111
+  3258 2B7C FF				.byte %11111111
+  3259 2B7D FF				.byte %11111111
+  3260 					; char 362
+  3261 2B7E FF				.byte %11111111
+  3262 2B7F FF				.byte %11111111
+  3263 2B80 FF				.byte %11111111
+  3264 2B81 FF				.byte %11111111
+  3265 2B82 FF				.byte %11111111
+  3266 2B83 FF				.byte %11111111
+  3267 2B84 FF				.byte %11111111
+  3268 2B85 FF				.byte %11111111
+  3269 					; char 363
+  3270 2B86 FF				.byte %11111111
+  3271 2B87 FF				.byte %11111111
+  3272 2B88 FF				.byte %11111111
+  3273 2B89 FF				.byte %11111111
+  3274 2B8A FF				.byte %11111111
+  3275 2B8B FF				.byte %11111111
+  3276 2B8C FF				.byte %11111111
+  3277 2B8D FF				.byte %11111111
+  3278 					; char 364
+  3279 2B8E FF				.byte %11111111
+  3280 2B8F FF				.byte %11111111
+  3281 2B90 FF				.byte %11111111
+  3282 2B91 FF				.byte %11111111
+  3283 2B92 FF				.byte %11111111
+  3284 2B93 FF				.byte %11111111
+  3285 2B94 FF				.byte %11111111
+  3286 2B95 FF				.byte %11111111
+  3287 					; char 365
+  3288 2B96 FF				.byte %11111111
+  3289 2B97 FF				.byte %11111111
+  3290 2B98 FF				.byte %11111111
+  3291 2B99 FF				.byte %11111111
+  3292 2B9A FF				.byte %11111111
+  3293 2B9B FF				.byte %11111111
+  3294 2B9C FF				.byte %11111111
+  3295 2B9D FF				.byte %11111111
+  3296 					; char 366
+  3297 2B9E FF				.byte %11111111
+  3298 2B9F FF				.byte %11111111
+  3299 2BA0 FF				.byte %11111111
+  3300 2BA1 FF				.byte %11111111
+  3301 2BA2 FF				.byte %11111111
+  3302 2BA3 FF				.byte %11111111
+  3303 2BA4 FF				.byte %11111111
+  3304 2BA5 FF				.byte %11111111
+  3305 					; char 367
+  3306 2BA6 FF				.byte %11111111
+  3307 2BA7 FF				.byte %11111111
+  3308 2BA8 FF				.byte %11111111
+  3309 2BA9 FF				.byte %11111111
+  3310 2BAA FF				.byte %11111111
+  3311 2BAB FF				.byte %11111111
+  3312 2BAC FF				.byte %11111111
+  3313 2BAD FF				.byte %11111111
+  3314 					; char 368
+  3315 2BAE FF				.byte %11111111
+  3316 2BAF FF				.byte %11111111
+  3317 2BB0 FF				.byte %11111111
+  3318 2BB1 FF				.byte %11111111
+  3319 2BB2 FF				.byte %11111111
+  3320 2BB3 FF				.byte %11111111
+  3321 2BB4 FF				.byte %11111111
+  3322 2BB5 FF				.byte %11111111
+  3323 					; char 369
+  3324 2BB6 FF				.byte %11111111
+  3325 2BB7 FF				.byte %11111111
+  3326 2BB8 FF				.byte %11111111
+  3327 2BB9 FF				.byte %11111111
+  3328 2BBA FF				.byte %11111111
+  3329 2BBB FF				.byte %11111111
+  3330 2BBC FF				.byte %11111111
+  3331 2BBD FF				.byte %11111111
+  3332 					; char 370
+  3333 2BBE FF				.byte %11111111
+  3334 2BBF FF				.byte %11111111
+  3335 2BC0 FF				.byte %11111111
+  3336 2BC1 FF				.byte %11111111
+  3337 2BC2 FF				.byte %11111111
+  3338 2BC3 FF				.byte %11111111
+  3339 2BC4 FF				.byte %11111111
+  3340 2BC5 FF				.byte %11111111
+  3341 					; char 371
+  3342 2BC6 FF				.byte %11111111
+  3343 2BC7 FF				.byte %11111111
+  3344 2BC8 FF				.byte %11111111
+  3345 2BC9 FF				.byte %11111111
+  3346 2BCA FF				.byte %11111111
+  3347 2BCB FF				.byte %11111111
+  3348 2BCC FF				.byte %11111111
+  3349 2BCD FF				.byte %11111111
+  3350 					; char 372
+  3351 2BCE FF				.byte %11111111
+  3352 2BCF FF				.byte %11111111
+  3353 2BD0 FF				.byte %11111111
+  3354 2BD1 FF				.byte %11111111
+  3355 2BD2 FF				.byte %11111111
+  3356 2BD3 FF				.byte %11111111
+  3357 2BD4 FF				.byte %11111111
+  3358 2BD5 FF				.byte %11111111
+  3359 					; char 373
+  3360 2BD6 FF				.byte %11111111
+  3361 2BD7 FF				.byte %11111111
+  3362 2BD8 FF				.byte %11111111
+  3363 2BD9 FF				.byte %11111111
+  3364 2BDA FF				.byte %11111111
+  3365 2BDB FF				.byte %11111111
+  3366 2BDC FF				.byte %11111111
+  3367 2BDD FF				.byte %11111111
+  3368 					; char 374
+  3369 2BDE FF				.byte %11111111
+  3370 2BDF FF				.byte %11111111
+  3371 2BE0 FF				.byte %11111111
+  3372 2BE1 FF				.byte %11111111
+  3373 2BE2 FF				.byte %11111111
+  3374 2BE3 FF				.byte %11111111
+  3375 2BE4 FF				.byte %11111111
+  3376 2BE5 FF				.byte %11111111
+  3377 					; char 375
+  3378 2BE6 FF				.byte %11111111
+  3379 2BE7 FF				.byte %11111111
+  3380 2BE8 FF				.byte %11111111
+  3381 2BE9 FF				.byte %11111111
+  3382 2BEA FF				.byte %11111111
+  3383 2BEB FF				.byte %11111111
+  3384 2BEC FF				.byte %11111111
+  3385 2BED FF				.byte %11111111
+  3386 					; char 376
+  3387 2BEE FF				.byte %11111111
+  3388 2BEF FF				.byte %11111111
+  3389 2BF0 FF				.byte %11111111
+  3390 2BF1 FF				.byte %11111111
+  3391 2BF2 FF				.byte %11111111
+  3392 2BF3 FF				.byte %11111111
+  3393 2BF4 FF				.byte %11111111
+  3394 2BF5 FF				.byte %11111111
+  3395 					; char 377
+  3396 2BF6 FF				.byte %11111111
+  3397 2BF7 FF				.byte %11111111
+  3398 2BF8 FF				.byte %11111111
+  3399 2BF9 FF				.byte %11111111
+  3400 2BFA FF				.byte %11111111
+  3401 2BFB FF				.byte %11111111
+  3402 2BFC FF				.byte %11111111
+  3403 2BFD FF				.byte %11111111
+  3404 					; char 378
+  3405 2BFE FF				.byte %11111111
+  3406 2BFF FF				.byte %11111111
+  3407 2C00 FF				.byte %11111111
+  3408 2C01 FF				.byte %11111111
+  3409 2C02 FF				.byte %11111111
+  3410 2C03 FF				.byte %11111111
+  3411 2C04 FF				.byte %11111111
+  3412 2C05 FF				.byte %11111111
+  3413 					; char 379
+  3414 2C06 FF				.byte %11111111
+  3415 2C07 FF				.byte %11111111
+  3416 2C08 FF				.byte %11111111
+  3417 2C09 FF				.byte %11111111
+  3418 2C0A FF				.byte %11111111
+  3419 2C0B FF				.byte %11111111
+  3420 2C0C FF				.byte %11111111
+  3421 2C0D FF				.byte %11111111
+  3422 					; char 380
+  3423 2C0E FF				.byte %11111111
+  3424 2C0F FF				.byte %11111111
+  3425 2C10 FF				.byte %11111111
+  3426 2C11 FF				.byte %11111111
+  3427 2C12 FF				.byte %11111111
+  3428 2C13 FF				.byte %11111111
+  3429 2C14 FF				.byte %11111111
+  3430 2C15 FF				.byte %11111111
+  3431 					; char 381
+  3432 2C16 FF				.byte %11111111
+  3433 2C17 FF				.byte %11111111
+  3434 2C18 FF				.byte %11111111
+  3435 2C19 FF				.byte %11111111
+  3436 2C1A FF				.byte %11111111
+  3437 2C1B FF				.byte %11111111
+  3438 2C1C FF				.byte %11111111
+  3439 2C1D FF				.byte %11111111
+  3440 					; char 382
+  3441 2C1E FF				.byte %11111111
+  3442 2C1F FF				.byte %11111111
+  3443 2C20 FF				.byte %11111111
+  3444 2C21 FF				.byte %11111111
+  3445 2C22 FF				.byte %11111111
+  3446 2C23 FF				.byte %11111111
+  3447 2C24 FF				.byte %11111111
+  3448 2C25 FF				.byte %11111111
+  3449 					; char 383
+  3450 2C26 FF				.byte %11111111
+  3451 2C27 FF				.byte %11111111
+  3452 2C28 FF				.byte %11111111
+  3453 2C29 FF				.byte %11111111
+  3454 2C2A FF				.byte %11111111
+  3455 2C2B FF				.byte %11111111
+  3456 2C2C FF				.byte %11111111
+  3457 2C2D FF				.byte %11111111
+  3458 					; char 384
+  3459 2C2E FF				.byte %11111111
+  3460 2C2F FF				.byte %11111111
+  3461 2C30 FF				.byte %11111111
+  3462 2C31 FF				.byte %11111111
+  3463 2C32 FF				.byte %11111111
+  3464 2C33 FF				.byte %11111111
+  3465 2C34 FF				.byte %11111111
+  3466 2C35 FF				.byte %11111111
+  3467 					; char 385
+  3468 2C36 FF				.byte %11111111
+  3469 2C37 FF				.byte %11111111
+  3470 2C38 FF				.byte %11111111
+  3471 2C39 FF				.byte %11111111
+  3472 2C3A FF				.byte %11111111
+  3473 2C3B FF				.byte %11111111
+  3474 2C3C FF				.byte %11111111
+  3475 2C3D FF				.byte %11111111
+  3476 					; char 386
+  3477 2C3E FF				.byte %11111111
+  3478 2C3F FF				.byte %11111111
+  3479 2C40 FF				.byte %11111111
+  3480 2C41 FF				.byte %11111111
+  3481 2C42 FF				.byte %11111111
+  3482 2C43 FF				.byte %11111111
+  3483 2C44 FF				.byte %11111111
+  3484 2C45 FF				.byte %11111111
+  3485 					; char 387
+  3486 2C46 FF				.byte %11111111
+  3487 2C47 FF				.byte %11111111
+  3488 2C48 FF				.byte %11111111
+  3489 2C49 FF				.byte %11111111
+  3490 2C4A FF				.byte %11111111
+  3491 2C4B FF				.byte %11111111
+  3492 2C4C FF				.byte %11111111
+  3493 2C4D FF				.byte %11111111
+  3494 					; char 388
+  3495 2C4E FF				.byte %11111111
+  3496 2C4F FF				.byte %11111111
+  3497 2C50 FF				.byte %11111111
+  3498 2C51 FF				.byte %11111111
+  3499 2C52 FF				.byte %11111111
+  3500 2C53 FF				.byte %11111111
+  3501 2C54 FF				.byte %11111111
+  3502 2C55 FF				.byte %11111111
+  3503 					; char 389
+  3504 2C56 FF				.byte %11111111
+  3505 2C57 FF				.byte %11111111
+  3506 2C58 FF				.byte %11111111
+  3507 2C59 FF				.byte %11111111
+  3508 2C5A FF				.byte %11111111
+  3509 2C5B FF				.byte %11111111
+  3510 2C5C FF				.byte %11111111
+  3511 2C5D FF				.byte %11111111
+  3512 					; char 390
+  3513 2C5E FF				.byte %11111111
+  3514 2C5F FF				.byte %11111111
+  3515 2C60 FF				.byte %11111111
+  3516 2C61 FF				.byte %11111111
+  3517 2C62 FF				.byte %11111111
+  3518 2C63 FF				.byte %11111111
+  3519 2C64 FF				.byte %11111111
+  3520 2C65 FF				.byte %11111111
+  3521 					; char 391
+  3522 2C66 FF				.byte %11111111
+  3523 2C67 FF				.byte %11111111
+  3524 2C68 FF				.byte %11111111
+  3525 2C69 FF				.byte %11111111
+  3526 2C6A FF				.byte %11111111
+  3527 2C6B FF				.byte %11111111
+  3528 2C6C FF				.byte %11111111
+  3529 2C6D FF				.byte %11111111
+  3530 					; char 392
+  3531 2C6E FF				.byte %11111111
+  3532 2C6F FF				.byte %11111111
+  3533 2C70 FF				.byte %11111111
+  3534 2C71 FF				.byte %11111111
+  3535 2C72 FF				.byte %11111111
+  3536 2C73 FF				.byte %11111111
+  3537 2C74 FF				.byte %11111111
+  3538 2C75 FF				.byte %11111111
+  3539 					; char 393
+  3540 2C76 FF				.byte %11111111
+  3541 2C77 FF				.byte %11111111
+  3542 2C78 FF				.byte %11111111
+  3543 2C79 FF				.byte %11111111
+  3544 2C7A FF				.byte %11111111
+  3545 2C7B FF				.byte %11111111
+  3546 2C7C FF				.byte %11111111
+  3547 2C7D FF				.byte %11111111
+  3548 					; char 394
+  3549 2C7E FF				.byte %11111111
+  3550 2C7F FF				.byte %11111111
+  3551 2C80 FF				.byte %11111111
+  3552 2C81 FF				.byte %11111111
+  3553 2C82 FF				.byte %11111111
+  3554 2C83 FF				.byte %11111111
+  3555 2C84 FF				.byte %11111111
+  3556 2C85 FF				.byte %11111111
+  3557 					; char 395
+  3558 2C86 FF				.byte %11111111
+  3559 2C87 FF				.byte %11111111
+  3560 2C88 FF				.byte %11111111
+  3561 2C89 FF				.byte %11111111
+  3562 2C8A FF				.byte %11111111
+  3563 2C8B FF				.byte %11111111
+  3564 2C8C FF				.byte %11111111
+  3565 2C8D FF				.byte %11111111
+  3566 					; char 396
+  3567 2C8E FF				.byte %11111111
+  3568 2C8F FF				.byte %11111111
+  3569 2C90 FF				.byte %11111111
+  3570 2C91 FF				.byte %11111111
+  3571 2C92 FF				.byte %11111111
+  3572 2C93 FF				.byte %11111111
+  3573 2C94 FF				.byte %11111111
+  3574 2C95 FF				.byte %11111111
+  3575 					; char 397
+  3576 2C96 FF				.byte %11111111
+  3577 2C97 FF				.byte %11111111
+  3578 2C98 FF				.byte %11111111
+  3579 2C99 FF				.byte %11111111
+  3580 2C9A FF				.byte %11111111
+  3581 2C9B FF				.byte %11111111
+  3582 2C9C FF				.byte %11111111
+  3583 2C9D FF				.byte %11111111
+  3584 					; char 398
+  3585 2C9E FF				.byte %11111111
+  3586 2C9F FF				.byte %11111111
+  3587 2CA0 FF				.byte %11111111
+  3588 2CA1 FF				.byte %11111111
+  3589 2CA2 FF				.byte %11111111
+  3590 2CA3 FF				.byte %11111111
+  3591 2CA4 FF				.byte %11111111
+  3592 2CA5 FF				.byte %11111111
+  3593 					; char 399
+  3594 2CA6 FF				.byte %11111111
+  3595 2CA7 FF				.byte %11111111
+  3596 2CA8 FF				.byte %11111111
+  3597 2CA9 FF				.byte %11111111
+  3598 2CAA FF				.byte %11111111
+  3599 2CAB FF				.byte %11111111
+  3600 2CAC FF				.byte %11111111
+  3601 2CAD FF				.byte %11111111
+  3602 					; char 400
+  3603 2CAE FF				.byte %11111111
+  3604 2CAF FF				.byte %11111111
+  3605 2CB0 FF				.byte %11111111
+  3606 2CB1 FF				.byte %11111111
+  3607 2CB2 FF				.byte %11111111
+  3608 2CB3 FF				.byte %11111111
+  3609 2CB4 FF				.byte %11111111
+  3610 2CB5 FF				.byte %11111111
+  3611 					; char 401
+  3612 2CB6 FF				.byte %11111111
+  3613 2CB7 FF				.byte %11111111
+  3614 2CB8 FF				.byte %11111111
+  3615 2CB9 FF				.byte %11111111
+  3616 2CBA FF				.byte %11111111
+  3617 2CBB FF				.byte %11111111
+  3618 2CBC FF				.byte %11111111
+  3619 2CBD FF				.byte %11111111
+  3620 					; char 402
+  3621 2CBE FF				.byte %11111111
+  3622 2CBF FF				.byte %11111111
+  3623 2CC0 FF				.byte %11111111
+  3624 2CC1 FF				.byte %11111111
+  3625 2CC2 FF				.byte %11111111
+  3626 2CC3 FF				.byte %11111111
+  3627 2CC4 FF				.byte %11111111
+  3628 2CC5 FF				.byte %11111111
+  3629 					; char 403
+  3630 2CC6 FF				.byte %11111111
+  3631 2CC7 FF				.byte %11111111
+  3632 2CC8 FF				.byte %11111111
+  3633 2CC9 FF				.byte %11111111
+  3634 2CCA FF				.byte %11111111
+  3635 2CCB FF				.byte %11111111
+  3636 2CCC FF				.byte %11111111
+  3637 2CCD FF				.byte %11111111
+  3638 					; char 404
+  3639 2CCE FF				.byte %11111111
+  3640 2CCF FF				.byte %11111111
+  3641 2CD0 FF				.byte %11111111
+  3642 2CD1 FF				.byte %11111111
+  3643 2CD2 FF				.byte %11111111
+  3644 2CD3 FF				.byte %11111111
+  3645 2CD4 FF				.byte %11111111
+  3646 2CD5 FF				.byte %11111111
+  3647 					; char 405
+  3648 2CD6 FF				.byte %11111111
+  3649 2CD7 FF				.byte %11111111
+  3650 2CD8 FF				.byte %11111111
+  3651 2CD9 FF				.byte %11111111
+  3652 2CDA FF				.byte %11111111
+  3653 2CDB FF				.byte %11111111
+  3654 2CDC FF				.byte %11111111
+  3655 2CDD FF				.byte %11111111
+  3656 					; char 406
+  3657 2CDE FF				.byte %11111111
+  3658 2CDF FF				.byte %11111111
+  3659 2CE0 FF				.byte %11111111
+  3660 2CE1 FF				.byte %11111111
+  3661 2CE2 FF				.byte %11111111
+  3662 2CE3 FF				.byte %11111111
+  3663 2CE4 FF				.byte %11111111
+  3664 2CE5 FF				.byte %11111111
+  3665 					; char 407
+  3666 2CE6 FF				.byte %11111111
+  3667 2CE7 FF				.byte %11111111
+  3668 2CE8 FF				.byte %11111111
+  3669 2CE9 FF				.byte %11111111
+  3670 2CEA FF				.byte %11111111
+  3671 2CEB FF				.byte %11111111
+  3672 2CEC FF				.byte %11111111
+  3673 2CED FF				.byte %11111111
+  3674 					; char 408
+  3675 2CEE FF				.byte %11111111
+  3676 2CEF FF				.byte %11111111
+  3677 2CF0 FF				.byte %11111111
+  3678 2CF1 FF				.byte %11111111
+  3679 2CF2 FF				.byte %11111111
+  3680 2CF3 FF				.byte %11111111
+  3681 2CF4 FF				.byte %11111111
+  3682 2CF5 FF				.byte %11111111
+  3683 					; char 409
+  3684 2CF6 FF				.byte %11111111
+  3685 2CF7 FF				.byte %11111111
+  3686 2CF8 FF				.byte %11111111
+  3687 2CF9 FF				.byte %11111111
+  3688 2CFA FF				.byte %11111111
+  3689 2CFB FF				.byte %11111111
+  3690 2CFC FF				.byte %11111111
+  3691 2CFD FF				.byte %11111111
+  3692 					; char 410
+  3693 2CFE FF				.byte %11111111
+  3694 2CFF FF				.byte %11111111
+  3695 2D00 FF				.byte %11111111
+  3696 2D01 FF				.byte %11111111
+  3697 2D02 FF				.byte %11111111
+  3698 2D03 FF				.byte %11111111
+  3699 2D04 FF				.byte %11111111
+  3700 2D05 FF				.byte %11111111
+  3701 					; char 411
+  3702 2D06 FF				.byte %11111111
+  3703 2D07 FF				.byte %11111111
+  3704 2D08 FF				.byte %11111111
+  3705 2D09 FF				.byte %11111111
+  3706 2D0A FF				.byte %11111111
+  3707 2D0B FF				.byte %11111111
+  3708 2D0C FF				.byte %11111111
+  3709 2D0D FF				.byte %11111111
+  3710 					; char 412
+  3711 2D0E FF				.byte %11111111
+  3712 2D0F FF				.byte %11111111
+  3713 2D10 FF				.byte %11111111
+  3714 2D11 FF				.byte %11111111
+  3715 2D12 FF				.byte %11111111
+  3716 2D13 FF				.byte %11111111
+  3717 2D14 FF				.byte %11111111
+  3718 2D15 FF				.byte %11111111
+  3719 					; char 413
+  3720 2D16 FF				.byte %11111111
+  3721 2D17 FF				.byte %11111111
+  3722 2D18 FF				.byte %11111111
+  3723 2D19 FF				.byte %11111111
+  3724 2D1A FF				.byte %11111111
+  3725 2D1B FF				.byte %11111111
+  3726 2D1C FF				.byte %11111111
+  3727 2D1D FF				.byte %11111111
+  3728 					; char 414
+  3729 2D1E FF				.byte %11111111
+  3730 2D1F FF				.byte %11111111
+  3731 2D20 FF				.byte %11111111
+  3732 2D21 FF				.byte %11111111
+  3733 2D22 FF				.byte %11111111
+  3734 2D23 FF				.byte %11111111
+  3735 2D24 FF				.byte %11111111
+  3736 2D25 FF				.byte %11111111
+  3737 					; char 415
+  3738 2D26 FF				.byte %11111111
+  3739 2D27 FF				.byte %11111111
+  3740 2D28 FF				.byte %11111111
+  3741 2D29 FF				.byte %11111111
+  3742 2D2A FF				.byte %11111111
+  3743 2D2B FF				.byte %11111111
+  3744 2D2C FF				.byte %11111111
+  3745 2D2D FF				.byte %11111111
+  3746 					; char 416
+  3747 2D2E FF				.byte %11111111
+  3748 2D2F FF				.byte %11111111
+  3749 2D30 FF				.byte %11111111
+  3750 2D31 FF				.byte %11111111
+  3751 2D32 FF				.byte %11111111
+  3752 2D33 FF				.byte %11111111
+  3753 2D34 FF				.byte %11111111
+  3754 2D35 FF				.byte %11111111
+  3755 					; char 417
+  3756 2D36 FF				.byte %11111111
+  3757 2D37 FF				.byte %11111111
+  3758 2D38 FF				.byte %11111111
+  3759 2D39 FF				.byte %11111111
+  3760 2D3A FF				.byte %11111111
+  3761 2D3B FF				.byte %11111111
+  3762 2D3C FF				.byte %11111111
+  3763 2D3D FF				.byte %11111111
+  3764 					; char 418
+  3765 2D3E FF				.byte %11111111
+  3766 2D3F FF				.byte %11111111
+  3767 2D40 FF				.byte %11111111
+  3768 2D41 FF				.byte %11111111
+  3769 2D42 FF				.byte %11111111
+  3770 2D43 FF				.byte %11111111
+  3771 2D44 FF				.byte %11111111
+  3772 2D45 FF				.byte %11111111
+  3773 					; char 419
+  3774 2D46 FF				.byte %11111111
+  3775 2D47 FF				.byte %11111111
+  3776 2D48 FF				.byte %11111111
+  3777 2D49 FF				.byte %11111111
+  3778 2D4A FF				.byte %11111111
+  3779 2D4B FF				.byte %11111111
+  3780 2D4C FF				.byte %11111111
+  3781 2D4D FF				.byte %11111111
+  3782 					; char 420
+  3783 2D4E FF				.byte %11111111
+  3784 2D4F FF				.byte %11111111
+  3785 2D50 FF				.byte %11111111
+  3786 2D51 FF				.byte %11111111
+  3787 2D52 FF				.byte %11111111
+  3788 2D53 FF				.byte %11111111
+  3789 2D54 FF				.byte %11111111
+  3790 2D55 FF				.byte %11111111
+  3791 					; char 421
+  3792 2D56 FF				.byte %11111111
+  3793 2D57 FF				.byte %11111111
+  3794 2D58 FF				.byte %11111111
+  3795 2D59 FF				.byte %11111111
+  3796 2D5A FF				.byte %11111111
+  3797 2D5B FF				.byte %11111111
+  3798 2D5C FF				.byte %11111111
+  3799 2D5D FF				.byte %11111111
+  3800 					; char 422
+  3801 2D5E FF				.byte %11111111
+  3802 2D5F FF				.byte %11111111
+  3803 2D60 FF				.byte %11111111
+  3804 2D61 FF				.byte %11111111
+  3805 2D62 FF				.byte %11111111
+  3806 2D63 FF				.byte %11111111
+  3807 2D64 FF				.byte %11111111
+  3808 2D65 FF				.byte %11111111
+  3809 					; char 423
+  3810 2D66 FF				.byte %11111111
+  3811 2D67 FF				.byte %11111111
+  3812 2D68 FF				.byte %11111111
+  3813 2D69 FF				.byte %11111111
+  3814 2D6A FF				.byte %11111111
+  3815 2D6B FF				.byte %11111111
+  3816 2D6C FF				.byte %11111111
+  3817 2D6D FF				.byte %11111111
+  3818 					; char 424
+  3819 2D6E FF				.byte %11111111
+  3820 2D6F FF				.byte %11111111
+  3821 2D70 FF				.byte %11111111
+  3822 2D71 FF				.byte %11111111
+  3823 2D72 FF				.byte %11111111
+  3824 2D73 FF				.byte %11111111
+  3825 2D74 FF				.byte %11111111
+  3826 2D75 FF				.byte %11111111
+  3827 					; char 425
+  3828 2D76 FF				.byte %11111111
+  3829 2D77 FF				.byte %11111111
+  3830 2D78 FF				.byte %11111111
+  3831 2D79 FF				.byte %11111111
+  3832 2D7A FF				.byte %11111111
+  3833 2D7B FF				.byte %11111111
+  3834 2D7C FF				.byte %11111111
+  3835 2D7D FF				.byte %11111111
+  3836 					; char 426
+  3837 2D7E FF				.byte %11111111
+  3838 2D7F FF				.byte %11111111
+  3839 2D80 FF				.byte %11111111
+  3840 2D81 FF				.byte %11111111
+  3841 2D82 FF				.byte %11111111
+  3842 2D83 FF				.byte %11111111
+  3843 2D84 FF				.byte %11111111
+  3844 2D85 FF				.byte %11111111
+  3845 					; char 427
+  3846 2D86 FF				.byte %11111111
+  3847 2D87 FF				.byte %11111111
+  3848 2D88 FF				.byte %11111111
+  3849 2D89 FF				.byte %11111111
+  3850 2D8A FF				.byte %11111111
+  3851 2D8B FF				.byte %11111111
+  3852 2D8C FF				.byte %11111111
+  3853 2D8D FF				.byte %11111111
+  3854 					; char 428
+  3855 2D8E FF				.byte %11111111
+  3856 2D8F FF				.byte %11111111
+  3857 2D90 FF				.byte %11111111
+  3858 2D91 FF				.byte %11111111
+  3859 2D92 FF				.byte %11111111
+  3860 2D93 FF				.byte %11111111
+  3861 2D94 FF				.byte %11111111
+  3862 2D95 FF				.byte %11111111
+  3863 					; char 429
+  3864 2D96 FF				.byte %11111111
+  3865 2D97 FF				.byte %11111111
+  3866 2D98 FF				.byte %11111111
+  3867 2D99 FF				.byte %11111111
+  3868 2D9A FF				.byte %11111111
+  3869 2D9B FF				.byte %11111111
+  3870 2D9C FF				.byte %11111111
+  3871 2D9D FF				.byte %11111111
+  3872 					; char 430
+  3873 2D9E FF				.byte %11111111
+  3874 2D9F FF				.byte %11111111
+  3875 2DA0 FF				.byte %11111111
+  3876 2DA1 FF				.byte %11111111
+  3877 2DA2 FF				.byte %11111111
+  3878 2DA3 FF				.byte %11111111
+  3879 2DA4 FF				.byte %11111111
+  3880 2DA5 FF				.byte %11111111
+  3881 					; char 431
+  3882 2DA6 FF				.byte %11111111
+  3883 2DA7 FF				.byte %11111111
+  3884 2DA8 FF				.byte %11111111
+  3885 2DA9 FF				.byte %11111111
+  3886 2DAA FF				.byte %11111111
+  3887 2DAB FF				.byte %11111111
+  3888 2DAC FF				.byte %11111111
+  3889 2DAD FF				.byte %11111111
+  3890 					; char 432
+  3891 2DAE FF				.byte %11111111
+  3892 2DAF FF				.byte %11111111
+  3893 2DB0 FF				.byte %11111111
+  3894 2DB1 FF				.byte %11111111
+  3895 2DB2 FF				.byte %11111111
+  3896 2DB3 FF				.byte %11111111
+  3897 2DB4 FF				.byte %11111111
+  3898 2DB5 FF				.byte %11111111
+  3899 					; char 433
+  3900 2DB6 FF				.byte %11111111
+  3901 2DB7 FF				.byte %11111111
+  3902 2DB8 FF				.byte %11111111
+  3903 2DB9 FF				.byte %11111111
+  3904 2DBA FF				.byte %11111111
+  3905 2DBB FF				.byte %11111111
+  3906 2DBC FF				.byte %11111111
+  3907 2DBD FF				.byte %11111111
+  3908 					; char 434
+  3909 2DBE FF				.byte %11111111
+  3910 2DBF FF				.byte %11111111
+  3911 2DC0 FF				.byte %11111111
+  3912 2DC1 FF				.byte %11111111
+  3913 2DC2 FF				.byte %11111111
+  3914 2DC3 FF				.byte %11111111
+  3915 2DC4 FF				.byte %11111111
+  3916 2DC5 FF				.byte %11111111
+  3917 					; char 435
+  3918 2DC6 FF				.byte %11111111
+  3919 2DC7 FF				.byte %11111111
+  3920 2DC8 FF				.byte %11111111
+  3921 2DC9 FF				.byte %11111111
+  3922 2DCA FF				.byte %11111111
+  3923 2DCB FF				.byte %11111111
+  3924 2DCC FF				.byte %11111111
+  3925 2DCD FF				.byte %11111111
+  3926 					; char 436
+  3927 2DCE FF				.byte %11111111
+  3928 2DCF FF				.byte %11111111
+  3929 2DD0 FF				.byte %11111111
+  3930 2DD1 FF				.byte %11111111
+  3931 2DD2 FF				.byte %11111111
+  3932 2DD3 FF				.byte %11111111
+  3933 2DD4 FF				.byte %11111111
+  3934 2DD5 FF				.byte %11111111
+  3935 					; char 437
+  3936 2DD6 FF				.byte %11111111
+  3937 2DD7 FF				.byte %11111111
+  3938 2DD8 FF				.byte %11111111
+  3939 2DD9 FF				.byte %11111111
+  3940 2DDA FF				.byte %11111111
+  3941 2DDB FF				.byte %11111111
+  3942 2DDC FF				.byte %11111111
+  3943 2DDD FF				.byte %11111111
+  3944 					; char 438
+  3945 2DDE FF				.byte %11111111
+  3946 2DDF FF				.byte %11111111
+  3947 2DE0 FF				.byte %11111111
+  3948 2DE1 FF				.byte %11111111
+  3949 2DE2 FF				.byte %11111111
+  3950 2DE3 FF				.byte %11111111
+  3951 2DE4 FF				.byte %11111111
+  3952 2DE5 FF				.byte %11111111
+  3953 					; char 439
+  3954 2DE6 FF				.byte %11111111
+  3955 2DE7 FF				.byte %11111111
+  3956 2DE8 FF				.byte %11111111
+  3957 2DE9 FF				.byte %11111111
+  3958 2DEA FF				.byte %11111111
+  3959 2DEB FF				.byte %11111111
+  3960 2DEC FF				.byte %11111111
+  3961 2DED FF				.byte %11111111
+  3962 					; char 440
+  3963 2DEE FF				.byte %11111111
+  3964 2DEF FF				.byte %11111111
+  3965 2DF0 FF				.byte %11111111
+  3966 2DF1 FF				.byte %11111111
+  3967 2DF2 FF				.byte %11111111
+  3968 2DF3 FF				.byte %11111111
+  3969 2DF4 FF				.byte %11111111
+  3970 2DF5 FF				.byte %11111111
+  3971 					; char 441
+  3972 2DF6 FF				.byte %11111111
+  3973 2DF7 FF				.byte %11111111
+  3974 2DF8 FF				.byte %11111111
+  3975 2DF9 FF				.byte %11111111
+  3976 2DFA FF				.byte %11111111
+  3977 2DFB FF				.byte %11111111
+  3978 2DFC FF				.byte %11111111
+  3979 2DFD FF				.byte %11111111
+  3980 					; char 442
+  3981 2DFE FF				.byte %11111111
+  3982 2DFF FF				.byte %11111111
+  3983 2E00 FF				.byte %11111111
+  3984 2E01 FF				.byte %11111111
+  3985 2E02 FF				.byte %11111111
+  3986 2E03 FF				.byte %11111111
+  3987 2E04 FF				.byte %11111111
+  3988 2E05 FF				.byte %11111111
+  3989 					; char 443
+  3990 2E06 FF				.byte %11111111
+  3991 2E07 FF				.byte %11111111
+  3992 2E08 FF				.byte %11111111
+  3993 2E09 FF				.byte %11111111
+  3994 2E0A FF				.byte %11111111
+  3995 2E0B FF				.byte %11111111
+  3996 2E0C FF				.byte %11111111
+  3997 2E0D FF				.byte %11111111
+  3998 					; char 444
+  3999 2E0E FF				.byte %11111111
+  4000 2E0F FF				.byte %11111111
+  4001 2E10 FF				.byte %11111111
+  4002 2E11 FF				.byte %11111111
+  4003 2E12 FF				.byte %11111111
+  4004 2E13 FF				.byte %11111111
+  4005 2E14 FF				.byte %11111111
+  4006 2E15 FF				.byte %11111111
+  4007 					; char 445
+  4008 2E16 FF				.byte %11111111
+  4009 2E17 FF				.byte %11111111
+  4010 2E18 FF				.byte %11111111
+  4011 2E19 FF				.byte %11111111
+  4012 2E1A FF				.byte %11111111
+  4013 2E1B FF				.byte %11111111
+  4014 2E1C FF				.byte %11111111
+  4015 2E1D FF				.byte %11111111
+  4016 					; char 446
+  4017 2E1E FF				.byte %11111111
+  4018 2E1F FF				.byte %11111111
+  4019 2E20 FF				.byte %11111111
+  4020 2E21 FF				.byte %11111111
+  4021 2E22 FF				.byte %11111111
+  4022 2E23 FF				.byte %11111111
+  4023 2E24 FF				.byte %11111111
+  4024 2E25 FF				.byte %11111111
+  4025 					; char 447
+  4026 2E26 FF				.byte %11111111
+  4027 2E27 FF				.byte %11111111
+  4028 2E28 FF				.byte %11111111
+  4029 2E29 FF				.byte %11111111
+  4030 2E2A FF				.byte %11111111
+  4031 2E2B FF				.byte %11111111
+  4032 2E2C FF				.byte %11111111
+  4033 2E2D FF				.byte %11111111
+  4034 					; char 448
+  4035 2E2E FF				.byte %11111111
+  4036 2E2F FF				.byte %11111111
+  4037 2E30 FF				.byte %11111111
+  4038 2E31 FF				.byte %11111111
+  4039 2E32 FF				.byte %11111111
+  4040 2E33 FF				.byte %11111111
+  4041 2E34 FF				.byte %11111111
+  4042 2E35 FF				.byte %11111111
+  4043 					; char 449
+  4044 2E36 FF				.byte %11111111
+  4045 2E37 FF				.byte %11111111
+  4046 2E38 FF				.byte %11111111
+  4047 2E39 FF				.byte %11111111
+  4048 2E3A FF				.byte %11111111
+  4049 2E3B FF				.byte %11111111
+  4050 2E3C FF				.byte %11111111
+  4051 2E3D FF				.byte %11111111
+  4052 					; char 450
+  4053 2E3E FF				.byte %11111111
+  4054 2E3F FF				.byte %11111111
+  4055 2E40 FF				.byte %11111111
+  4056 2E41 FF				.byte %11111111
+  4057 2E42 FF				.byte %11111111
+  4058 2E43 FF				.byte %11111111
+  4059 2E44 FF				.byte %11111111
+  4060 2E45 FF				.byte %11111111
+  4061 					; char 451
+  4062 2E46 FF				.byte %11111111
+  4063 2E47 FF				.byte %11111111
+  4064 2E48 FF				.byte %11111111
+  4065 2E49 FF				.byte %11111111
+  4066 2E4A FF				.byte %11111111
+  4067 2E4B FF				.byte %11111111
+  4068 2E4C FF				.byte %11111111
+  4069 2E4D FF				.byte %11111111
+  4070 					; char 452
+  4071 2E4E FF				.byte %11111111
+  4072 2E4F FF				.byte %11111111
+  4073 2E50 FF				.byte %11111111
+  4074 2E51 FF				.byte %11111111
+  4075 2E52 FF				.byte %11111111
+  4076 2E53 FF				.byte %11111111
+  4077 2E54 FF				.byte %11111111
+  4078 2E55 FF				.byte %11111111
+  4079 					; char 453
+  4080 2E56 FF				.byte %11111111
+  4081 2E57 FF				.byte %11111111
+  4082 2E58 FF				.byte %11111111
+  4083 2E59 FF				.byte %11111111
+  4084 2E5A FF				.byte %11111111
+  4085 2E5B FF				.byte %11111111
+  4086 2E5C FF				.byte %11111111
+  4087 2E5D FF				.byte %11111111
+  4088 					; char 454
+  4089 2E5E FF				.byte %11111111
+  4090 2E5F FF				.byte %11111111
+  4091 2E60 FF				.byte %11111111
+  4092 2E61 FF				.byte %11111111
+  4093 2E62 FF				.byte %11111111
+  4094 2E63 FF				.byte %11111111
+  4095 2E64 FF				.byte %11111111
+  4096 2E65 FF				.byte %11111111
+  4097 					; char 455
+  4098 2E66 FF				.byte %11111111
+  4099 2E67 FF				.byte %11111111
+  4100 2E68 FF				.byte %11111111
+  4101 2E69 FF				.byte %11111111
+  4102 2E6A FF				.byte %11111111
+  4103 2E6B FF				.byte %11111111
+  4104 2E6C FF				.byte %11111111
+  4105 2E6D FF				.byte %11111111
+  4106 					; char 456
+  4107 2E6E FF				.byte %11111111
+  4108 2E6F FF				.byte %11111111
+  4109 2E70 FF				.byte %11111111
+  4110 2E71 FF				.byte %11111111
+  4111 2E72 FF				.byte %11111111
+  4112 2E73 FF				.byte %11111111
+  4113 2E74 FF				.byte %11111111
+  4114 2E75 FF				.byte %11111111
+  4115 					; char 457
+  4116 2E76 FF				.byte %11111111
+  4117 2E77 FF				.byte %11111111
+  4118 2E78 FF				.byte %11111111
+  4119 2E79 FF				.byte %11111111
+  4120 2E7A FF				.byte %11111111
+  4121 2E7B FF				.byte %11111111
+  4122 2E7C FF				.byte %11111111
+  4123 2E7D FF				.byte %11111111
+  4124 					; char 458
+  4125 2E7E FF				.byte %11111111
+  4126 2E7F FF				.byte %11111111
+  4127 2E80 FF				.byte %11111111
+  4128 2E81 FF				.byte %11111111
+  4129 2E82 FF				.byte %11111111
+  4130 2E83 FF				.byte %11111111
+  4131 2E84 FF				.byte %11111111
+  4132 2E85 FF				.byte %11111111
+  4133 					; char 459
+  4134 2E86 FF				.byte %11111111
+  4135 2E87 FF				.byte %11111111
+  4136 2E88 FF				.byte %11111111
+  4137 2E89 FF				.byte %11111111
+  4138 2E8A FF				.byte %11111111
+  4139 2E8B FF				.byte %11111111
+  4140 2E8C FF				.byte %11111111
+  4141 2E8D FF				.byte %11111111
+  4142 					; char 460
+  4143 2E8E FF				.byte %11111111
+  4144 2E8F FF				.byte %11111111
+  4145 2E90 FF				.byte %11111111
+  4146 2E91 FF				.byte %11111111
+  4147 2E92 FF				.byte %11111111
+  4148 2E93 FF				.byte %11111111
+  4149 2E94 FF				.byte %11111111
+  4150 2E95 FF				.byte %11111111
+  4151 					; char 461
+  4152 2E96 FF				.byte %11111111
+  4153 2E97 FF				.byte %11111111
+  4154 2E98 FF				.byte %11111111
+  4155 2E99 FF				.byte %11111111
+  4156 2E9A FF				.byte %11111111
+  4157 2E9B FF				.byte %11111111
+  4158 2E9C FF				.byte %11111111
+  4159 2E9D FF				.byte %11111111
+  4160 					; char 462
+  4161 2E9E FF				.byte %11111111
+  4162 2E9F FF				.byte %11111111
+  4163 2EA0 FF				.byte %11111111
+  4164 2EA1 FF				.byte %11111111
+  4165 2EA2 FF				.byte %11111111
+  4166 2EA3 FF				.byte %11111111
+  4167 2EA4 FF				.byte %11111111
+  4168 2EA5 FF				.byte %11111111
+  4169 					; char 463
+  4170 2EA6 FF				.byte %11111111
+  4171 2EA7 FF				.byte %11111111
+  4172 2EA8 FF				.byte %11111111
+  4173 2EA9 FF				.byte %11111111
+  4174 2EAA FF				.byte %11111111
+  4175 2EAB FF				.byte %11111111
+  4176 2EAC FF				.byte %11111111
+  4177 2EAD FF				.byte %11111111
+  4178 					; char 464
+  4179 2EAE FF				.byte %11111111
+  4180 2EAF FF				.byte %11111111
+  4181 2EB0 FF				.byte %11111111
+  4182 2EB1 FF				.byte %11111111
+  4183 2EB2 FF				.byte %11111111
+  4184 2EB3 FF				.byte %11111111
+  4185 2EB4 FF				.byte %11111111
+  4186 2EB5 FF				.byte %11111111
+  4187 					; char 465
+  4188 2EB6 FF				.byte %11111111
+  4189 2EB7 FF				.byte %11111111
+  4190 2EB8 FF				.byte %11111111
+  4191 2EB9 FF				.byte %11111111
+  4192 2EBA FF				.byte %11111111
+  4193 2EBB FF				.byte %11111111
+  4194 2EBC FF				.byte %11111111
+  4195 2EBD FF				.byte %11111111
+  4196 					; char 466
+  4197 2EBE FF				.byte %11111111
+  4198 2EBF FF				.byte %11111111
+  4199 2EC0 FF				.byte %11111111
+  4200 2EC1 FF				.byte %11111111
+  4201 2EC2 FF				.byte %11111111
+  4202 2EC3 FF				.byte %11111111
+  4203 2EC4 FF				.byte %11111111
+  4204 2EC5 FF				.byte %11111111
+  4205 					; char 467
+  4206 2EC6 FF				.byte %11111111
+  4207 2EC7 FF				.byte %11111111
+  4208 2EC8 FF				.byte %11111111
+  4209 2EC9 FF				.byte %11111111
+  4210 2ECA FF				.byte %11111111
+  4211 2ECB FF				.byte %11111111
+  4212 2ECC FF				.byte %11111111
+  4213 2ECD FF				.byte %11111111
+  4214 					; char 468
+  4215 2ECE FF				.byte %11111111
+  4216 2ECF FF				.byte %11111111
+  4217 2ED0 FF				.byte %11111111
+  4218 2ED1 FF				.byte %11111111
+  4219 2ED2 FF				.byte %11111111
+  4220 2ED3 FF				.byte %11111111
+  4221 2ED4 FF				.byte %11111111
+  4222 2ED5 FF				.byte %11111111
+  4223 					; char 469
+  4224 2ED6 FF				.byte %11111111
+  4225 2ED7 FF				.byte %11111111
+  4226 2ED8 FF				.byte %11111111
+  4227 2ED9 FF				.byte %11111111
+  4228 2EDA FF				.byte %11111111
+  4229 2EDB FF				.byte %11111111
+  4230 2EDC FF				.byte %11111111
+  4231 2EDD FF				.byte %11111111
+  4232 					; char 470
+  4233 2EDE FF				.byte %11111111
+  4234 2EDF FF				.byte %11111111
+  4235 2EE0 FF				.byte %11111111
+  4236 2EE1 FF				.byte %11111111
+  4237 2EE2 FF				.byte %11111111
+  4238 2EE3 FF				.byte %11111111
+  4239 2EE4 FF				.byte %11111111
+  4240 2EE5 FF				.byte %11111111
+  4241 					; char 471
+  4242 2EE6 FF				.byte %11111111
+  4243 2EE7 FF				.byte %11111111
+  4244 2EE8 FF				.byte %11111111
+  4245 2EE9 FF				.byte %11111111
+  4246 2EEA FF				.byte %11111111
+  4247 2EEB FF				.byte %11111111
+  4248 2EEC FF				.byte %11111111
+  4249 2EED FF				.byte %11111111
+  4250 					; char 472
+  4251 2EEE FF				.byte %11111111
+  4252 2EEF FF				.byte %11111111
+  4253 2EF0 FF				.byte %11111111
+  4254 2EF1 FF				.byte %11111111
+  4255 2EF2 FF				.byte %11111111
+  4256 2EF3 FF				.byte %11111111
+  4257 2EF4 FF				.byte %11111111
+  4258 2EF5 FF				.byte %11111111
+  4259 					; char 473
+  4260 2EF6 FF				.byte %11111111
+  4261 2EF7 FF				.byte %11111111
+  4262 2EF8 FF				.byte %11111111
+  4263 2EF9 FF				.byte %11111111
+  4264 2EFA FF				.byte %11111111
+  4265 2EFB FF				.byte %11111111
+  4266 2EFC FF				.byte %11111111
+  4267 2EFD FF				.byte %11111111
+  4268 					; char 474
+  4269 2EFE FF				.byte %11111111
+  4270 2EFF FF				.byte %11111111
+  4271 2F00 FF				.byte %11111111
+  4272 2F01 FF				.byte %11111111
+  4273 2F02 FF				.byte %11111111
+  4274 2F03 FF				.byte %11111111
+  4275 2F04 FF				.byte %11111111
+  4276 2F05 FF				.byte %11111111
+  4277 					; char 475
+  4278 2F06 FF				.byte %11111111
+  4279 2F07 FF				.byte %11111111
+  4280 2F08 FF				.byte %11111111
+  4281 2F09 FF				.byte %11111111
+  4282 2F0A FF				.byte %11111111
+  4283 2F0B FF				.byte %11111111
+  4284 2F0C FF				.byte %11111111
+  4285 2F0D FF				.byte %11111111
+  4286 					; char 476
+  4287 2F0E FF				.byte %11111111
+  4288 2F0F FF				.byte %11111111
+  4289 2F10 FF				.byte %11111111
+  4290 2F11 FF				.byte %11111111
+  4291 2F12 FF				.byte %11111111
+  4292 2F13 FF				.byte %11111111
+  4293 2F14 FF				.byte %11111111
+  4294 2F15 FF				.byte %11111111
+  4295 					; char 477
+  4296 2F16 FF				.byte %11111111
+  4297 2F17 FF				.byte %11111111
+  4298 2F18 FF				.byte %11111111
+  4299 2F19 FF				.byte %11111111
+  4300 2F1A FF				.byte %11111111
+  4301 2F1B FF				.byte %11111111
+  4302 2F1C FF				.byte %11111111
+  4303 2F1D FF				.byte %11111111
+  4304 					; char 478
+  4305 2F1E FF				.byte %11111111
+  4306 2F1F FF				.byte %11111111
+  4307 2F20 FF				.byte %11111111
+  4308 2F21 FF				.byte %11111111
+  4309 2F22 FF				.byte %11111111
+  4310 2F23 FF				.byte %11111111
+  4311 2F24 FF				.byte %11111111
+  4312 2F25 FF				.byte %11111111
+  4313 					; char 479
+  4314 2F26 FF				.byte %11111111
+  4315 2F27 FF				.byte %11111111
+  4316 2F28 FF				.byte %11111111
+  4317 2F29 FF				.byte %11111111
+  4318 2F2A FF				.byte %11111111
+  4319 2F2B FF				.byte %11111111
+  4320 2F2C FF				.byte %11111111
+  4321 2F2D FF				.byte %11111111
+  4322 					; char 480
+  4323 2F2E FF				.byte %11111111
+  4324 2F2F FF				.byte %11111111
+  4325 2F30 FF				.byte %11111111
+  4326 2F31 FF				.byte %11111111
+  4327 2F32 FF				.byte %11111111
+  4328 2F33 FF				.byte %11111111
+  4329 2F34 FF				.byte %11111111
+  4330 2F35 FF				.byte %11111111
+  4331 					; char 481
+  4332 2F36 FF				.byte %11111111
+  4333 2F37 FF				.byte %11111111
+  4334 2F38 FF				.byte %11111111
+  4335 2F39 FF				.byte %11111111
+  4336 2F3A FF				.byte %11111111
+  4337 2F3B FF				.byte %11111111
+  4338 2F3C FF				.byte %11111111
+  4339 2F3D FF				.byte %11111111
+  4340 					; char 482
+  4341 2F3E FF				.byte %11111111
+  4342 2F3F FF				.byte %11111111
+  4343 2F40 FF				.byte %11111111
+  4344 2F41 FF				.byte %11111111
+  4345 2F42 FF				.byte %11111111
+  4346 2F43 FF				.byte %11111111
+  4347 2F44 FF				.byte %11111111
+  4348 2F45 FF				.byte %11111111
+  4349 					; char 483
+  4350 2F46 FF				.byte %11111111
+  4351 2F47 FF				.byte %11111111
+  4352 2F48 FF				.byte %11111111
+  4353 2F49 FF				.byte %11111111
+  4354 2F4A FF				.byte %11111111
+  4355 2F4B FF				.byte %11111111
+  4356 2F4C FF				.byte %11111111
+  4357 2F4D FF				.byte %11111111
+  4358 					; char 484
+  4359 2F4E FF				.byte %11111111
+  4360 2F4F FF				.byte %11111111
+  4361 2F50 FF				.byte %11111111
+  4362 2F51 FF				.byte %11111111
+  4363 2F52 FF				.byte %11111111
+  4364 2F53 FF				.byte %11111111
+  4365 2F54 FF				.byte %11111111
+  4366 2F55 FF				.byte %11111111
+  4367 					; char 485
+  4368 2F56 FF				.byte %11111111
+  4369 2F57 FF				.byte %11111111
+  4370 2F58 FF				.byte %11111111
+  4371 2F59 FF				.byte %11111111
+  4372 2F5A FF				.byte %11111111
+  4373 2F5B FF				.byte %11111111
+  4374 2F5C FF				.byte %11111111
+  4375 2F5D FF				.byte %11111111
+  4376 					; char 486
+  4377 2F5E FF				.byte %11111111
+  4378 2F5F FF				.byte %11111111
+  4379 2F60 FF				.byte %11111111
+  4380 2F61 FF				.byte %11111111
+  4381 2F62 FF				.byte %11111111
+  4382 2F63 FF				.byte %11111111
+  4383 2F64 FF				.byte %11111111
+  4384 2F65 FF				.byte %11111111
+  4385 					; char 487
+  4386 2F66 FF				.byte %11111111
+  4387 2F67 FF				.byte %11111111
+  4388 2F68 FF				.byte %11111111
+  4389 2F69 FF				.byte %11111111
+  4390 2F6A FF				.byte %11111111
+  4391 2F6B FF				.byte %11111111
+  4392 2F6C FF				.byte %11111111
+  4393 2F6D FF				.byte %11111111
+  4394 					; char 488
+  4395 2F6E FF				.byte %11111111
+  4396 2F6F FF				.byte %11111111
+  4397 2F70 FF				.byte %11111111
+  4398 2F71 FF				.byte %11111111
+  4399 2F72 FF				.byte %11111111
+  4400 2F73 FF				.byte %11111111
+  4401 2F74 FF				.byte %11111111
+  4402 2F75 FF				.byte %11111111
+  4403 					; char 489
+  4404 2F76 FF				.byte %11111111
+  4405 2F77 FF				.byte %11111111
+  4406 2F78 FF				.byte %11111111
+  4407 2F79 FF				.byte %11111111
+  4408 2F7A FF				.byte %11111111
+  4409 2F7B FF				.byte %11111111
+  4410 2F7C FF				.byte %11111111
+  4411 2F7D FF				.byte %11111111
+  4412 					; char 490
+  4413 2F7E FF				.byte %11111111
+  4414 2F7F FF				.byte %11111111
+  4415 2F80 FF				.byte %11111111
+  4416 2F81 FF				.byte %11111111
+  4417 2F82 FF				.byte %11111111
+  4418 2F83 FF				.byte %11111111
+  4419 2F84 FF				.byte %11111111
+  4420 2F85 FF				.byte %11111111
+  4421 					; char 491
+  4422 2F86 FF				.byte %11111111
+  4423 2F87 FF				.byte %11111111
+  4424 2F88 FF				.byte %11111111
+  4425 2F89 FF				.byte %11111111
+  4426 2F8A FF				.byte %11111111
+  4427 2F8B FF				.byte %11111111
+  4428 2F8C FF				.byte %11111111
+  4429 2F8D FF				.byte %11111111
+  4430 					; char 492
+  4431 2F8E FF				.byte %11111111
+  4432 2F8F FF				.byte %11111111
+  4433 2F90 FF				.byte %11111111
+  4434 2F91 FF				.byte %11111111
+  4435 2F92 FF				.byte %11111111
+  4436 2F93 FF				.byte %11111111
+  4437 2F94 FF				.byte %11111111
+  4438 2F95 FF				.byte %11111111
+  4439 					; char 493
+  4440 2F96 FF				.byte %11111111
+  4441 2F97 FF				.byte %11111111
+  4442 2F98 FF				.byte %11111111
+  4443 2F99 FF				.byte %11111111
+  4444 2F9A FF				.byte %11111111
+  4445 2F9B FF				.byte %11111111
+  4446 2F9C FF				.byte %11111111
+  4447 2F9D FF				.byte %11111111
+  4448 					; char 494
+  4449 2F9E FF				.byte %11111111
+  4450 2F9F FF				.byte %11111111
+  4451 2FA0 FF				.byte %11111111
+  4452 2FA1 FF				.byte %11111111
+  4453 2FA2 FF				.byte %11111111
+  4454 2FA3 FF				.byte %11111111
+  4455 2FA4 FF				.byte %11111111
+  4456 2FA5 FF				.byte %11111111
+  4457 					; char 495
+  4458 2FA6 FF				.byte %11111111
+  4459 2FA7 FF				.byte %11111111
+  4460 2FA8 FF				.byte %11111111
+  4461 2FA9 FF				.byte %11111111
+  4462 2FAA FF				.byte %11111111
+  4463 2FAB FF				.byte %11111111
+  4464 2FAC FF				.byte %11111111
+  4465 2FAD FF				.byte %11111111
+  4466 					; char 496
+  4467 2FAE FF				.byte %11111111
+  4468 2FAF FF				.byte %11111111
+  4469 2FB0 FF				.byte %11111111
+  4470 2FB1 FF				.byte %11111111
+  4471 2FB2 FF				.byte %11111111
+  4472 2FB3 FF				.byte %11111111
+  4473 2FB4 FF				.byte %11111111
+  4474 2FB5 FF				.byte %11111111
+  4475 					; char 497
+  4476 2FB6 FF				.byte %11111111
+  4477 2FB7 FF				.byte %11111111
+  4478 2FB8 FF				.byte %11111111
+  4479 2FB9 FF				.byte %11111111
+  4480 2FBA FF				.byte %11111111
+  4481 2FBB FF				.byte %11111111
+  4482 2FBC FF				.byte %11111111
+  4483 2FBD FF				.byte %11111111
+  4484 					; char 498
+  4485 2FBE FF				.byte %11111111
+  4486 2FBF FF				.byte %11111111
+  4487 2FC0 FF				.byte %11111111
+  4488 2FC1 FF				.byte %11111111
+  4489 2FC2 FF				.byte %11111111
+  4490 2FC3 FF				.byte %11111111
+  4491 2FC4 FF				.byte %11111111
+  4492 2FC5 FF				.byte %11111111
+  4493 					; char 499
+  4494 2FC6 FF				.byte %11111111
+  4495 2FC7 FF				.byte %11111111
+  4496 2FC8 FF				.byte %11111111
+  4497 2FC9 FF				.byte %11111111
+  4498 2FCA FF				.byte %11111111
+  4499 2FCB FF				.byte %11111111
+  4500 2FCC FF				.byte %11111111
+  4501 2FCD FF				.byte %11111111
+  4502 					; char 500
+  4503 2FCE FF				.byte %11111111
+  4504 2FCF FF				.byte %11111111
+  4505 2FD0 FF				.byte %11111111
+  4506 2FD1 FF				.byte %11111111
+  4507 2FD2 FF				.byte %11111111
+  4508 2FD3 FF				.byte %11111111
+  4509 2FD4 FF				.byte %11111111
+  4510 2FD5 FF				.byte %11111111
+  4511 					; char 501
+  4512 2FD6 FF				.byte %11111111
+  4513 2FD7 FF				.byte %11111111
+  4514 2FD8 FF				.byte %11111111
+  4515 2FD9 FF				.byte %11111111
+  4516 2FDA FF				.byte %11111111
+  4517 2FDB FF				.byte %11111111
+  4518 2FDC FF				.byte %11111111
+  4519 2FDD FF				.byte %11111111
+  4520 					; char 502
+  4521 2FDE FF				.byte %11111111
+  4522 2FDF FF				.byte %11111111
+  4523 2FE0 FF				.byte %11111111
+  4524 2FE1 FF				.byte %11111111
+  4525 2FE2 FF				.byte %11111111
+  4526 2FE3 FF				.byte %11111111
+  4527 2FE4 FF				.byte %11111111
+  4528 2FE5 FF				.byte %11111111
+  4529 					; char 503
+  4530 2FE6 FF				.byte %11111111
+  4531 2FE7 FF				.byte %11111111
+  4532 2FE8 FF				.byte %11111111
+  4533 2FE9 FF				.byte %11111111
+  4534 2FEA FF				.byte %11111111
+  4535 2FEB FF				.byte %11111111
+  4536 2FEC FF				.byte %11111111
+  4537 2FED FF				.byte %11111111
+  4538 					; char 504
+  4539 2FEE FF				.byte %11111111
+  4540 2FEF FF				.byte %11111111
+  4541 2FF0 FF				.byte %11111111
+  4542 2FF1 FF				.byte %11111111
+  4543 2FF2 FF				.byte %11111111
+  4544 2FF3 FF				.byte %11111111
+  4545 2FF4 FF				.byte %11111111
+  4546 2FF5 FF				.byte %11111111
+  4547 					; char 505
+  4548 2FF6 FF				.byte %11111111
+  4549 2FF7 FF				.byte %11111111
+  4550 2FF8 FF				.byte %11111111
+  4551 2FF9 FF				.byte %11111111
+  4552 2FFA FF				.byte %11111111
+  4553 2FFB FF				.byte %11111111
+  4554 2FFC FF				.byte %11111111
+  4555 2FFD FF				.byte %11111111
+  4556 					; char 506
+  4557 2FFE FF				.byte %11111111
+  4558 2FFF FF				.byte %11111111
+  4559 3000 FF				.byte %11111111
+  4560 3001 FF				.byte %11111111
+  4561 3002 FF				.byte %11111111
+  4562 3003 FF				.byte %11111111
+  4563 3004 FF				.byte %11111111
+  4564 3005 FF				.byte %11111111
+  4565 					; char 507
+  4566 3006 FF				.byte %11111111
+  4567 3007 FF				.byte %11111111
+  4568 3008 FF				.byte %11111111
+  4569 3009 FF				.byte %11111111
+  4570 300A FF				.byte %11111111
+  4571 300B FF				.byte %11111111
+  4572 300C FF				.byte %11111111
+  4573 300D FF				.byte %11111111
+  4574 					; char 508
+  4575 300E FF				.byte %11111111
+  4576 300F FF				.byte %11111111
+  4577 3010 FF				.byte %11111111
+  4578 3011 FF				.byte %11111111
+  4579 3012 FF				.byte %11111111
+  4580 3013 FF				.byte %11111111
+  4581 3014 FF				.byte %11111111
+  4582 3015 FF				.byte %11111111
+  4583 					; char 509
+  4584 3016 FF				.byte %11111111
+  4585 3017 FF				.byte %11111111
+  4586 3018 FF				.byte %11111111
+  4587 3019 FF				.byte %11111111
+  4588 301A FF				.byte %11111111
+  4589 301B FF				.byte %11111111
+  4590 301C FF				.byte %11111111
+  4591 301D FF				.byte %11111111
+  4592 					; char 510
+  4593 301E FF				.byte %11111111
+  4594 301F FF				.byte %11111111
+  4595 3020 FF				.byte %11111111
+  4596 3021 FF				.byte %11111111
+  4597 3022 FF				.byte %11111111
+  4598 3023 FF				.byte %11111111
+  4599 3024 FF				.byte %11111111
+  4600 3025 FF				.byte %11111111
+  4601 					; char 511
+  4602 3026 FF				.byte %11111111
+  4603 3027 FF				.byte %11111111
+  4604 3028 FF				.byte %11111111
+  4605 3029 FF				.byte %11111111
+  4606 302A FF				.byte %11111111
+  4607 302B FF				.byte %11111111
+  4608 302C FF				.byte %11111111
+  4609 302D FF				.byte %11111111
+  4610 					.endl
+    30 				    
+    31
+    32 				; Change colors
+    33 				;-------------------------------------------------------
+    34 				; Proc: setup_colors
+    35 				; Sets up the colors for the game
+    36 				;-------------------------------------------------------
+    37 302E			.proc setup_colors
+    38 				; Color Pallett
+    39 = 0000			bg_black = $00                          ; 00 Black
+    40 = 00F2			poop_brown = $f2                        ; f2 Brown
+    41 = 00F4			poop_peanut = $f4                       ; f4 yellow-brown
+    42 = 00B2			green_grass = $b2                       ; b2 Green
+    43 = 0084			blue_water = $84                        ; 84 Blue 
+    44 302E A9 F2 8D C4 02	    mva #poop_brown COLOR0              ; 01
+    45 3033 A9 F4 8D C5 02	    mva #poop_peanut COLOR1             ; 10
+    46 3038 A9 B2 8D C8 02	    mva #green_grass COLOR4             ; 11
+    47 303D A9 84 8D C7 02	    mva #blue_water COLOR3              ; 11 (reverse)
+    48 3042 A9 00 8D C6 02	    mva #bg_black COLOR2                ; 00 
+    49 3047 60			    rts
+    50 				    .endp
+    51
+    52 				;-------------------------------------------------------
+    53 				; Proc: load_gfx
+    54 				; Loads the graphics for the game
+    55 				;-------------------------------------------------------
+    56 3048			.proc load_gfx
+    57 				    ; Set up the character set
+    58 3048 A9 3C 8D F4 02	    mva #>charset CHBAS
+    59 				    
+    60 304D A2 00		    ldx #0
+    61 304F			loop
+    62
+    63 304F BD 2E 20 9D 00 3C	    mva gfx,x charset,x
+    64 3055 BD 36 20 9D 08 3C	    mva gfx+8,x charset+8,x
+    65 305B BD 3E 20 9D 10 3C	    mva gfx+16,x charset+16,x
+    66 3061 BD 4E 20 9D 20 3C	    mva gfx+32,x charset+32,x
+    67 				    
+    68 3067 E8			    inx
+    69 3068 E0 80		    cpx #128
+    70 306A D0 E3		    bne loop
+    71 306C 60			    rts 
+    72
     73 				    .endp
     74
-    75 2065			scene
-    76 2065 01 02 01 02 01 02 +     .byte 1,2,1,2,1,2,1,2,1,2
-    77
-    78
-    79 206F			chars
-    80
-    81 206F AA			    .byte %10101010
-    82 2070 A5				.byte %10100101
-    83 2071 55				.byte %01010101
-    84 2072 00				.byte %00000000
-    85 2073 52				.byte %01010010
-    86 2074 52				.byte %01010010
-    87 2075 52				.byte %01010010
-    88 2076 00				.byte %00000000
-    89 					
-    90 2077 4A				.byte %01001010
-    91 2078 4A				.byte %01001010
-    92 2079 09				.byte %00001001
-    93 207A 00				.byte %00000000
-    94 207B A9				.byte %10101001
-    95 207C 95				.byte %10010101
-    96 207D 55				.byte %01010101
-    97 207E 00				.byte %00000000
+    75
+    76 				;* --------------------------------------- *
+    77 				;* Proc: display_map                       *
+    78 				;* Displays the current map                *
+    79 				;* --------------------------------------- *
+    80 306D			.proc display_map
+    81 306D A0 00			ldy #0
+    82 306F			loop
+    83 306F B9 BD 30 99 00 40		mva map,y screen,y
+    84 3075 B9 E5 30 99 28 40		mva map+40,y screen+40,y
+    85 307B B9 0D 31 99 50 40		mva map+80,y screen+80,y
+    86 3081 B9 35 31 99 78 40		mva map+120,y screen+120,y
+    87 3087 B9 5D 31 99 A0 40		mva map+160,y screen+160,y
+    88 308D B9 85 31 99 C8 40		mva map+200,y screen+200,y
+    89 3093 B9 AD 31 99 F0 40		mva map+240,y screen+240,y
+    90 3099 B9 D5 31 99 18 41		mva map+280,y screen+280,y
+    91 309F B9 FD 31 99 40 41		mva map+320,y screen+320,y
+    92 30A5 B9 25 32 99 68 41		mva map+360,y screen+360,y
+    93 30AB B9 4D 32 99 90 41		mva map+400,y screen+400,y
+    94 30B1 B9 75 32 99 B8 41		mva map+440,y screen+440,y
+    95
+    96 30B7 C8				iny
+    97 30B8 C0 28			cpy #40
+    98 30BA D0 B3			bne loop
+    99 30BC 60				rts
+   100 					
+   101 30BD			map
+   102 30BD 02 03 04 05 06 07 + 	.byte 2,3,4,5,6,7,8,9,130,131,132,133,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3
+   103 30E5 02 03 04 05 04 05 + 	.byte 2,3,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,2,3
+   104 310D 02 03 04 05 04 05 + 	.byte 2,3,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,2,3
+   105 3135 02 03 04 05 04 05 + 	.byte 2,3,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,2,3
+   106 315D 02 03 04 05 04 05 + 	.byte 2,3,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,2,3
+   107 3185 02 03 04 05 04 05 + 	.byte 2,3,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,2,3
+   108 31AD 02 03 04 05 04 05 + 	.byte 2,3,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,2,3
+   109 31D5 02 03 04 05 04 05 + 	.byte 2,3,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,2,3,2,3,6,7,2,3,2,3
+   110 31FD 02 03 04 05 04 05 + 	.byte 2,3,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,2,3,4,5,4,5,4,5,2,3
+   111 3225 02 03 04 05 04 05 + 	.byte 2,3,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,2,3,4,5,10,11,4,5,2,3
+   112 324D 02 03 04 05 04 05 + 	.byte 2,3,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,2,3,4,5,4,5,4,5,2,3
+   113 3275 02 03 02 03 02 03 + 	.byte 2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3
+   114 					.endp

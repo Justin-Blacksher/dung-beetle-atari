@@ -11,28 +11,23 @@
 
     org $2000
 
-    icl '../lib/hardware.asm'
+    
 
 charset = $3c00             ; Character set
 screen = $4000              ; Screen buffer
-blank8 = $70                ; 8 blank lines
+
 
     setup_screen()          ; Sets up the Screen
     setup_colors()          ; Sets up the colors
     load_gfx()
-
-
-    ldy #0
-
-loop2
-    mva scene,y screen,y
-    iny
-    cpy #12
-    bne loop2
+    display_map()
 
     jmp *
 
+    icl '../lib/hardware.asm'
     icl '../lib/dlist.asm'
+    icl '../lib/gfx.asm'
+    
 
 ; Change colors
 ;-------------------------------------------------------
@@ -48,9 +43,9 @@ green_grass = $b2                       ; b2 Green
 blue_water = $84                        ; 84 Blue 
     mva #poop_brown COLOR0              ; 01
     mva #poop_peanut COLOR1             ; 10
-    mva #green_grass COLOR2             ; 11
+    mva #green_grass COLOR4             ; 11
     mva #blue_water COLOR3              ; 11 (reverse)
-    mva #bg_black COLOR4                ; 00 
+    mva #bg_black COLOR2                ; 00 
     rts
     .endp
 
@@ -65,33 +60,55 @@ blue_water = $84                        ; 84 Blue
     ldx #0
 loop
 
-    mva chars,x charset+8,x
+    mva gfx,x charset,x
+    mva gfx+8,x charset+8,x
+    mva gfx+16,x charset+16,x
+    mva gfx+32,x charset+32,x
+    
     inx
-    cpx #16
+    cpx #128
     bne loop
     rts 
+
     .endp
 
-scene
-    .byte 1,2,1,2,1,2,1,2,1,2
 
+;* --------------------------------------- *
+;* Proc: display_map                       *
+;* Displays the current map                *
+;* --------------------------------------- *
+.proc display_map
+	ldy #0
+loop
+	mva map,y screen,y
+	mva map+40,y screen+40,y
+	mva map+80,y screen+80,y
+	mva map+120,y screen+120,y
+	mva map+160,y screen+160,y
+	mva map+200,y screen+200,y
+	mva map+240,y screen+240,y
+	mva map+280,y screen+280,y
+	mva map+320,y screen+320,y
+	mva map+360,y screen+360,y
+	mva map+400,y screen+400,y
+	mva map+440,y screen+440,y
 
-chars
-
-    .byte %10101010
-	.byte %10100101
-	.byte %01010101
-	.byte %00000000
-	.byte %01010010
-	.byte %01010010
-	.byte %01010010
-	.byte %00000000
+	iny
+	cpy #40
+	bne loop
+	rts
 	
-	.byte %01001010
-	.byte %01001010
-	.byte %00001001
-	.byte %00000000
-	.byte %10101001
-	.byte %10010101
-	.byte %01010101
-	.byte %00000000
+map
+	.byte 2,3,4,5,6,7,8,9,130,131,132,133,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3
+	.byte 2,3,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,2,3
+	.byte 2,3,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,2,3
+	.byte 2,3,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,2,3
+	.byte 2,3,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,2,3
+	.byte 2,3,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,2,3
+	.byte 2,3,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,2,3
+	.byte 2,3,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,2,3,2,3,6,7,2,3,2,3
+	.byte 2,3,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,2,3,4,5,4,5,4,5,2,3
+	.byte 2,3,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,2,3,4,5,10,11,4,5,2,3
+	.byte 2,3,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,2,3,4,5,4,5,4,5,2,3
+	.byte 2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3
+	.endp
