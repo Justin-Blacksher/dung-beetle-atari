@@ -20,4 +20,4 @@ help:
 	@echo "git_commit			- Adds commit. Comment with comment="
 
 push: git_commit
-	git push origin main
+	git push -u origin main
