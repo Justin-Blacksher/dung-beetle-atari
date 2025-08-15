@@ -6,7 +6,7 @@ MAIN="/src/main.asm"
 
 
 compile_only:
-    $(COMPILER) -l -t $(MAIN)
+	$(COMPILER) -l -t $(MAIN)
 
 git_add:
 	git add .
@@ -15,7 +15,7 @@ git_commit: git_add
 	git commit -m "Commit from make. $(comment)"
 
 help:
-    echo "compile_only 	- Compiles main.asm\n"
+	echo "compile_only 	- Compiles main.asm\n"
 	echo "git_add 		- Adds the files to staging\n"
 	echo "git_commit 	- Adds commit. Comment with comment="
 	
