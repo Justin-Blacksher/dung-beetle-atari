@@ -15,7 +15,6 @@ git_commit: git_add
 	git commit -m "Commit from make. $(comment)"
 
 help:
-	echo "compile_only 	- Compiles main.asm\n"
-	echo "git_add 		- Adds the files to staging\n"
-	echo "git_commit 	- Adds commit. Comment with comment="
-	
+	@echo "compile_only			- Compiles main.asm"
+	@echo "git_add				- Adds the files to staging"
+	@echo "git_commit			- Adds commit. Comment with comment="
