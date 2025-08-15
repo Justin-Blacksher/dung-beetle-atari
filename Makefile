@@ -19,5 +19,5 @@ help:
 	@echo "git_add				- Adds the files to staging"
 	@echo "git_commit			- Adds commit. Comment with comment="
 
-push: git_commit
+push: git_add git_commit
 	git push -u origin master
