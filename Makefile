@@ -18,3 +18,6 @@ help:
 	@echo "compile_only			- Compiles main.asm"
 	@echo "git_add				- Adds the files to staging"
 	@echo "git_commit			- Adds commit. Comment with comment="
+
+push: git_commit
+	git push origin main
