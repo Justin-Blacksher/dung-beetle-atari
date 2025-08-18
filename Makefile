@@ -4,6 +4,7 @@ ALTIRRA="/emulation/Altirra.exe"
 COMPILER="/compiler/Mad-Assembler-2.1.6/bin/windows_x86_64/mads.exe"
 MAIN="/src/main.asm"
 
+.PHONY: git_add git_commit help push
 
 compile_only:
 	$(COMPILER) -l -t $(MAIN)
@@ -20,6 +21,6 @@ help:
 	@echo "git_commit			- Adds commit. Comment with comment="
 
 push: git_add git_commit
-	git push -u origin master
+	git push
 
 
