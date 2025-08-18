@@ -1,10 +1,15 @@
 # Makefile for game
 
-ALTIRRA="/emulation/Altirra.exe"
-COMPILER="/compiler/Mad-Assembler-2.1.6/bin/windows_x86_64/mads.exe"
-MAIN="/src/main.asm"
+PPATH=E:/dung_beetle
+ALTIRRA=${PPATH}/emulation/Altirra.exe
+COMPILER=${PPATH}/compiler/Mad-Assembler-2.1.6/bin/windows_x86_64/mads.exe
+MAIN=${PPATH}/src/main.asm
+MAINOBX=${PPATH}/src/main.obx
 
-.PHONY: git_add git_commit help push
+all: compile_only
+	$(ALTIRRA) $(MAINOBX)
+
+.PHONY: git_add git_commit help push clean
 
 compile_only:
 	$(COMPILER) -l -t $(MAIN)
@@ -12,7 +17,7 @@ compile_only:
 git_add:
 	git add .
 
-git_commit: git_add
+git_commit: 
 	git commit -m "Commit from make. $(comment)"
 
 help:
@@ -20,7 +25,8 @@ help:
 	@echo "git_add				- Adds the files to staging"
 	@echo "git_commit			- Adds commit. Comment with comment="
 
-push: git_add git_commit
+push: 
 	git push
+
 
 
