@@ -39,13 +39,13 @@ screen = $4000              ; Screen buffer
 bg_black = $00                          ; 00 Black
 poop_brown = $f2                        ; f2 Brown
 poop_peanut = $f4                       ; f4 yellow-brown
-green_grass = $b2                       ; b2 Green
-blue_water = $84                        ; 84 Blue 
+beetle_purple = $52                      ; b2 Green
+beetle_pink = $58                        ; 84 Blue 
     mva #poop_brown COLOR0              ; 01
     mva #poop_peanut COLOR1             ; 10
-    mva #green_grass COLOR4             ; 11
-    mva #blue_water COLOR3              ; 11 (reverse)
-    mva #bg_black COLOR2                ; 00 
+    mva #beetle_purple COLOR2           ; 11
+    mva #beetle_pink COLOR3              ; 11 (reverse)
+    mva #bg_black COLOR4                ; 00
     rts
     .endp
 
@@ -99,7 +99,7 @@ loop
 	rts
 	
 map
-	.byte 2,3,4,5,6,7,8,9,130,131,132,133,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3
+	.byte 4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3
 	.byte 2,3,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,2,3
 	.byte 2,3,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,2,3
 	.byte 2,3,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,2,3

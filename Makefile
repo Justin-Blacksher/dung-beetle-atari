@@ -9,7 +9,7 @@ MAINOBX=${PPATH}/src/main.obx
 all: compile_only
 	$(ALTIRRA) $(MAINOBX)
 
-.PHONY: git_add git_commit help push clean
+.PHONY: git_add git_commit help push clean maketile
 
 compile_only:
 	$(COMPILER) -l -t $(MAIN)
@@ -28,5 +28,6 @@ help:
 push: 
 	git push
 
-
+maketile:
+	python $(PPATH)/tile_maker.py
 
